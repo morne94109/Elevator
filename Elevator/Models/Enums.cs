@@ -8,14 +8,14 @@ namespace ElevatorSim.Models
 {
     public enum Status
     {
-        START,
         MOVING,
-        STOPPED
+        IDLE
     }
 
     public enum Direction
     {
         UP,
-        DOWN
+        DOWN,
+        NONE
     }
 }
