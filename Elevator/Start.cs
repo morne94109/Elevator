@@ -52,7 +52,14 @@ namespace ElevatorSim
 
                 Task.Run(async() =>
                 {
-                    await buildingController.CallElevator(userFloor);
+                    try
+                    {
+                        await buildingController.CallElevator(userFloor);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine();
+                    }
                 });
             }
 

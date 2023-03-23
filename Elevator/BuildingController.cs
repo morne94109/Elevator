@@ -35,7 +35,31 @@ namespace ElevatorSim.Models
         // Method to call an elevator to a specific floor
         public async Task CallElevator(int floor)
         {
-            await _elevatorController.CallElevator(floor);
+            int allwaiting = 0;
+            do
+            {
+                allwaiting = 0;
+                for (int i = 0; i < _floorController.GetFloorCount(); i++)
+                {
+                    var totalWaiting = _floorController.GetPeopleWaiting(i).Count;
+                    if (totalWaiting == 0)
+                    {
+                        continue;
+                    }
+                    allwaiting += totalWaiting;
+                    bool result = await _elevatorController.ScheduleElevator(i, totalWaiting);
+                    if(result)
+                    {
+                        _floorController.RemovePeople(i);
+                    }
+                }
+
+                await _elevatorController.SendElevator();
+            }
+            while (allwaiting != 0);
+
+
+
         }
     }
 }

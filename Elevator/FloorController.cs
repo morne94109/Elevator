@@ -10,22 +10,51 @@ public class FloorController : IFloorController
     private Config _config;
     private IAppLogger _logger;
     private List<Floor> _floors = new List<Floor>();
-    
+
     public FloorController(Config config, IAppLogger logger)
     {
         _config = config;
         _logger = logger;
     }
 
-    public void SetupFloors()
+    public void SetupFloors(bool setupPeople = true)
     {
         _logger.LogMessage($"Building floors.");
-        for(int i = 0;i < _config.GetNumFloors(); i++)
+        for (int i = 0; i < _config.GetNumFloors(); i++)
         {
-            _floors.Add(new Floor(_config.GetCapacity()));
+            _floors.Add(new Floor(i));
             _logger.LogMessage($"Floor {i} has been completed.");
         }
         _logger.LogMessage("Setup completed of floors for building.");
+        if (setupPeople)
+        {
+            PopulteFloors();
+        }
+    }
+
+    public void PopulteFloors()
+    {
+        for (int i = 0; i < _floors.Count; i++)
+        {
+            var random = new Random();
+            var randomNum = random.Next(0, 10);
+            People people = new People();
+            for (int z = 0; z < randomNum; z++)
+            {
+                people = new People();
+                int nextfloor = 0;
+                do
+                {
+                    nextfloor = random.Next(0, _floors.Count);
+                }
+                while (nextfloor == i);
+
+                people.DestinationFloor = nextfloor;
+                people.OnElevator = false;
+                _floors[i].Num_People.Add(people);
+            }
+
+        }
     }
 
     public int GetFloorCount()
@@ -33,21 +62,36 @@ public class FloorController : IFloorController
         return _floors.Count;
     }
 
-    public int GetPeopleWaiting(int floor)
+    public Floor GetFloor(int floor)
     {
-        return _floors[floor].Num_People;
+        return new Floor(_floors[floor]);
     }
-    
+
+    public List<People> GetPeopleWaiting(int floor)
+    {
+        return new List<People>(_floors[floor].Num_People);
+    }
+
     public bool HasPeopleWaiting(int floor)
     {
-        return _floors[floor].Num_People > 0;
+        return _floors[floor].Num_People.Count > 0;
     }
 
-    public void RemovePeople(int floor, int total)
+    public void RemovePeople(int floor, List<People> peopleList)
     {
-        _floors[floor].Num_People -= total;
+        foreach (var people in peopleList)
+        {
+            _floors[floor].Num_People.Remove(people);
+        }
     }
-    
 
-    
+    public void RemovePeople(int floor)
+    {
+
+        _floors[floor].Num_People = new List<People>();
+        
+    }
+
+
+
 }

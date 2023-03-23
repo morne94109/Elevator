@@ -2,10 +2,17 @@ namespace ElevatorSim.Models;
 
 public class Floor
 {
-    public int Num_People { get; set; }
+    public List<People> Num_People { get; set; } = new List<People>();
+    public int ID { get; set; }
 
-    public Floor(int numPeople)
+    public Floor(int id)
     {
-        Num_People = numPeople;
+        this.ID = id;
+    }
+
+    public Floor(Floor floor)
+    {
+        this.ID = floor.ID;
+        this.Num_People = floor.Num_People;
     }
 }

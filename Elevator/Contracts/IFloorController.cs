@@ -1,15 +1,20 @@
+using ElevatorSim.Models;
+
 namespace ElevatorSim.Contracts;
 
 public interface IFloorController
 {
-    void SetupFloors();
+    void SetupFloors(bool setupPeople = true);
 
     int GetFloorCount();
 
-    int GetPeopleWaiting(int floor);
+    Floor GetFloor(int floor);
+
+    List<People> GetPeopleWaiting(int floor);
     
     bool HasPeopleWaiting(int floor);
-    
-    void RemovePeople(int floor, int total);
+
+    void RemovePeople(int floor);
+    void RemovePeople(int floor, List<People> peopleList);
 
 }
