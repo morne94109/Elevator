@@ -3,54 +3,39 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ElevatorSim.Contracts;
 
 namespace ElevatorSim.Models
 {
-    internal class Building
+    internal class BuildingController : IBuildingController
     {
-        public int FloorCount { get; set; }
+        private readonly IElevatorController _elevatorController;
+        private readonly IFloorController _floorController;
+        private readonly Config _config;
+        private readonly IAppLogger _logger;
+        
         public List<Elevator> Elevators { get; set; }
 
         // Constructor
-        public Building(int floorCount, int elevatorCount, int elevatorCapacity)
+        public BuildingController(IElevatorController elevatorController, IFloorController floorController, Config config, IAppLogger logger)
         {
-            FloorCount = floorCount;
-            Elevators = new List<Elevator>();
-            for (int i = 0; i < elevatorCount; i++)
-            {
-                Elevators.Add(new Elevator(elevatorCapacity));
-            }
+            _elevatorController = elevatorController;
+            _floorController = floorController;
+            _config = config;
+            _logger = logger;
+        }
+
+        public void CreateBuilding()
+        {
+            _logger.LogMessage("Staring building construction!");
+            _floorController.SetupFloors();
+            _elevatorController.SetupElevators();
         }
 
         // Method to call an elevator to a specific floor
-        public void CallElevator(int floor)
+        public async Task CallElevator(int floor)
         {
-            Elevator nearestElevator = null;
-            int shortestDistance = FloorCount + 1;
-
-            // Find the nearest available elevator
-            foreach (Elevator elevator in Elevators)
-            {
-                if (elevator.CurrentStatus == Status.IDLE && elevator.CurrentDirection == Direction.NONE)
-                {
-                    int distance = Math.Abs(elevator.CurrentFloor - floor);
-                    if (distance < shortestDistance)
-                    {
-                        nearestElevator = elevator;
-                        shortestDistance = distance;
-                    }
-                }
-            }
-
-            // Move the nearest available elevator to the requested floor
-            if (nearestElevator != null)
-            {
-                nearestElevator.MoveTo(floor);
-            }
-            else
-            {
-                Console.WriteLine("No available elevators.");
-            }
+            await _elevatorController.CallElevator(floor);
         }
     }
 }

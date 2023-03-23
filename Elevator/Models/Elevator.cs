@@ -3,64 +3,90 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ElevatorSim.Contracts;
 
 namespace ElevatorSim.Models
 {
+
     public class Elevator
     {
-        public Elevator(int capacity)
+        private readonly ElevatorModel _elevatorModel;
+        private readonly IAppLogger _logger;
+        public Elevator(int id, int capacity, IAppLogger logger)
         {
-            Capacity = capacity;
+            _elevatorModel = new ElevatorModel(id, capacity);
+            _logger = logger;
         }
 
-        public Status CurrentStatus { get; set; } = Status.IDLE;
-
-        public Direction CurrentDirection { get; set; } = Direction.NONE;
-
-        public int CurrentFloor { get; set; } = 0;
-
-        public int Occupancy { get; set; } = 0;
-
-        public int Capacity { get; init; } = 5;
+        public ElevatorModel ElevatorModel
+        {
+            get { return _elevatorModel; }
+        }
 
         // Method to move the elevator
-        public void MoveTo(int floor)
+        public async Task MoveTo(int floor)
         {
-            Console.WriteLine("Elevator is moving to floor " + floor);
-            CurrentStatus = Status.MOVING;
-            if (CurrentFloor < floor)
+            int elevatorID = _elevatorModel.ID;
+            if (ElevatorModel.CurrentFloor == floor)
             {
-                CurrentDirection = Direction.UP;
-                for (int i = CurrentFloor; i <= floor; i++)
+                ElevatorModel.CurrentStatus = Status.IDLE;
+                ElevatorModel.CurrentDirection = Direction.NONE;
+                return;
+            }
+            
+            _logger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
+            ElevatorModel.CurrentStatus = Status.MOVING;
+            
+            if (ElevatorModel.CurrentFloor < floor)
+            {
+                ElevatorModel.CurrentDirection = Direction.UP;
+                for (int i = ElevatorModel.CurrentFloor; i <= floor; i++)
                 {
-                    CurrentFloor = i;
-                    Console.WriteLine("Elevator is on floor " + CurrentFloor);
+                    ElevatorModel.CurrentFloor = i;
+                    _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}" );
+                    if (ElevatorModel.CurrentFloor != floor)
+                    {
+                        await SimulateMoveDelay();
+                    }
+                }
+               
+            }
+            else if (ElevatorModel.CurrentFloor > floor)
+            {
+                ElevatorModel.CurrentDirection = Direction.DOWN;
+                for (int i = ElevatorModel.CurrentFloor; i >= floor; i--)
+                {
+                    ElevatorModel.CurrentFloor = i;
+                    _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
+                    if (ElevatorModel.CurrentFloor != floor)
+                    {
+                        await SimulateMoveDelay();
+                    }
                 }
             }
-            else if (CurrentFloor > floor)
-            {
-                CurrentDirection = Direction.DOWN;
-                for (int i = CurrentFloor; i >= floor; i--)
-                {
-                    CurrentFloor = i;
-                    Console.WriteLine("Elevator is on floor " + CurrentFloor);
-                }
-            }
-            CurrentStatus = Status.IDLE;
-            CurrentDirection = Direction.NONE;
+            
+            ElevatorModel.CurrentStatus = Status.IDLE;
+            ElevatorModel.CurrentDirection = Direction.NONE;
+            _logger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
+            
+        }
+
+        private static async Task SimulateMoveDelay()
+        {
+            await Task.Delay(2000);
         }
 
         // Method to add occupants to the elevator
         public bool AddOccupants(int count)
         {
-            if (Occupancy + count <= Capacity)
+            if (ElevatorModel.Occupancy + count <= ElevatorModel.Capacity)
             {
-                Occupancy += count;
+                ElevatorModel.Occupancy += count;
                 return true;
             }
             else
             {
-                Console.WriteLine("Elevator is at maximum capacity.");
+                _logger.LogMessage("Elevator is at maximum capacity.");
                 return false;
             }
         }
@@ -68,7 +94,7 @@ namespace ElevatorSim.Models
         // Method to remove occupants from the elevator
         public void RemoveOccupants(int count)
         {
-            Occupancy -= count;
+            ElevatorModel.Occupancy -= count;
         }
 
     }
