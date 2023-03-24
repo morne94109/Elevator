@@ -12,11 +12,13 @@ namespace ElevatorSim.Models
     {
         private readonly ElevatorModel _elevatorModel;
         private readonly IAppLogger _logger;
+        private readonly IFloorController _floorController;
 
-        public Elevator(int id, int capacity, IAppLogger logger)
+        public Elevator(int id, int capacity, IAppLogger logger, int totalFloors, IFloorController floorController)
         {
-            _elevatorModel = new ElevatorModel(id, capacity);
+            _elevatorModel = new ElevatorModel(id, capacity, totalFloors);
             _logger = logger;
+            _floorController = floorController;
         }
 
         public ElevatorModel ElevatorModel
@@ -25,75 +27,100 @@ namespace ElevatorSim.Models
         }
 
         // Method to move the elevator
-        public async Task Move()
-        {
+        public async Task Notify()
+        { 
             List<Floor> floorList = new List<Floor>(_elevatorModel.destinationFloors);
-            foreach (var floorModel in floorList)
+            while (floorList.Count != 0)
             {
-                var floor = floorModel.ID;
-                
-                int elevatorID = _elevatorModel.ID;
-                if (ElevatorModel.CurrentFloor == floor)
+                foreach (var floorModel in floorList)
                 {
-                    _logger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
+                    var floor = floorModel.ID;
+
+                    int elevatorID = _elevatorModel.ID;
+                    if (ElevatorModel.CurrentFloor == floor)
+                    {
+                        _logger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
+                        // ElevatorModel.CurrentStatus = Status.IDLE;
+                        // ElevatorModel.CurrentDirection = Direction.NONE;
+                        
+                        List<People> waitingPeople = new List<People>(floorModel.Num_People);
+                        foreach (var people in waitingPeople)
+                        {
+                            people.OnElevator = true;
+                        }
+                        AddOccupants(waitingPeople);
+                        await SimulateBoardingDelay();
+                      
+                    }
+                    else
+                    {
+                        _logger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
+                        ElevatorModel.CurrentStatus = Status.MOVING;
+
+                        if (ElevatorModel.CurrentFloor < floor)
+                        {
+                            ElevatorModel.CurrentDirection = Direction.UP;
+                            for (int i = ElevatorModel.CurrentFloor; i <= floor; i++)
+                            {
+
+                                DepartFromElevator(floorModel, i);
+                                ElevatorModel.CurrentFloor = i;
+                                _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
+                                if (ElevatorModel.CurrentFloor != floor)
+                                {
+                                    await SimulateMoveDelay();
+                                }
+                                else
+                                {
+                                    List<People> waitingPeople = new List<People>(floorModel.Num_People);
+                                    foreach (var people in waitingPeople)
+                                    {
+                                        people.OnElevator = true;
+                                    }
+
+                                    AddOccupants(waitingPeople);
+                                }
+                            }
+
+                        }
+                        else if (ElevatorModel.CurrentFloor > floor)
+                        {
+                            ElevatorModel.CurrentDirection = Direction.DOWN;
+                            for (int i = ElevatorModel.CurrentFloor; i >= floor; i--)
+                            {
+                                DepartFromElevator(floorModel, i);
+                                ElevatorModel.CurrentFloor = i;
+                                _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
+                                if (ElevatorModel.CurrentFloor != floor)
+                                {
+                                    await SimulateMoveDelay();
+                                }
+                                else
+                                {
+                                    List<People> waitingPeople = new List<People>(floorModel.Num_People);
+                                    foreach (var people in waitingPeople)
+                                    {
+                                        people.OnElevator = true;
+                                    }
+
+                                    AddOccupants(waitingPeople);
+                                }
+                            }
+                        }
+                    }
+
                     ElevatorModel.CurrentStatus = Status.IDLE;
-                    ElevatorModel.CurrentDirection = Direction.NONE;                   
-                    return;
+                    ElevatorModel.CurrentDirection = Direction.NONE;
+                    _logger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
+                    ElevatorModel.destinationFloors.Remove(floorModel);
                 }
+                floorList = new List<Floor>(_elevatorModel.destinationFloors);
+            }
+        }
 
-                _logger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
-                ElevatorModel.CurrentStatus = Status.MOVING;
-
-                if (ElevatorModel.CurrentFloor < floor)
-                {
-                    ElevatorModel.CurrentDirection = Direction.UP;
-                    for (int i = ElevatorModel.CurrentFloor; i <= floor; i++)
-                    {
-                       
-                        DepartFromElevator(floorModel, i);
-                        ElevatorModel.CurrentFloor = i;
-                        _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
-                        if (ElevatorModel.CurrentFloor != floor)
-                        {
-                            await SimulateMoveDelay();
-                        }
-                        else
-                        {
-                            foreach(var people in _elevatorModel.Occupancy)
-                            {
-                                people.OnElevator = true;
-                            }
-                        }
-                    }
-
-                }
-                else if (ElevatorModel.CurrentFloor > floor)
-                {
-                    ElevatorModel.CurrentDirection = Direction.DOWN;
-                    for (int i = ElevatorModel.CurrentFloor; i >= floor; i--)
-                    {
-                        DepartFromElevator(floorModel, i);
-                        ElevatorModel.CurrentFloor = i;
-                        _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
-                        if (ElevatorModel.CurrentFloor != floor)
-                        {
-                            await SimulateMoveDelay();
-                        }
-                        else
-                        {
-                            foreach (var people in _elevatorModel.Occupancy)
-                            {
-                                people.OnElevator = true;
-                            }
-                        }
-                    }
-                }
-
-                ElevatorModel.CurrentStatus = Status.IDLE;
-                ElevatorModel.CurrentDirection = Direction.NONE;
-                _logger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
-                ElevatorModel.destinationFloors.Remove(floorModel);
-            }            
+        private async Task SimulateBoardingDelay()
+        {
+            await Task.Delay(50);
         }
 
         private void DepartFromElevator(Floor floorModel, int currentFloor)
@@ -108,7 +135,7 @@ namespace ElevatorSim.Models
 
         private static async Task SimulateMoveDelay()
         {
-            await Task.Delay(2000);
+            await Task.Delay(5000);
         }
 
         // Method to add occupants to the elevator
@@ -117,6 +144,25 @@ namespace ElevatorSim.Models
             if (ElevatorModel.Occupancy.Count + listOfPeople.Count <= ElevatorModel.Capacity)
             {
                 ElevatorModel.Occupancy.AddRange(listOfPeople);
+                _floorController.RemovePeople(_elevatorModel.CurrentFloor,listOfPeople);
+                foreach (var people in listOfPeople)
+                {
+                    if (_elevatorModel.destinationFloors.Exists(x => x.ID == people.DestinationFloor) == false)
+                    {
+                        _elevatorModel.destinationFloors.Add(new Floor(people.DestinationFloor));
+                    }
+                }
+
+                if (_elevatorModel.CurrentFloor >= (_elevatorModel.totalFloors / 2))
+                {
+                    _elevatorModel.destinationFloors =
+                        _elevatorModel.destinationFloors.OrderByDescending(x => x.ID).ToList();
+                }
+                else
+                {
+                    _elevatorModel.destinationFloors = 
+                        _elevatorModel.destinationFloors.OrderBy(x => x.ID).ToList();
+                }
                 return true;
             }
             else

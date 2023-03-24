@@ -8,19 +8,21 @@ public class ElevatorController : IElevatorController
     private Config _config;
     private IAppLogger _logger;
     private readonly IFloorController _floorController;
+    private readonly IServiceProvider _serviceProvider;
     List<Elevator> Elevators = new List<Elevator>();
     public int FloorCount { get; set; }
 
     public void SetupElevators()
     {
+        FloorCount = _floorController.GetFloorCount();
         _logger.LogMessage($"Building elevators.");
         for (int i = 0; i < _config.GetNumElevators(); i++)
         {
-            Elevators.Add(new Elevator(i + 1, _config.GetCapacity(), _logger));
+            Elevators.Add(new Elevator(i + 1, _config.GetCapacity(), _logger, FloorCount, _floorController));
             _logger.LogMessage($"Elevator {i + 1} has been installed.");
         }
         _logger.LogMessage("Installation of all elevators completed.");
-        FloorCount = _floorController.GetFloorCount();
+       
     }
 
     public ElevatorController(Config config, IAppLogger logger, IFloorController floorController)
@@ -40,17 +42,19 @@ public class ElevatorController : IElevatorController
        // current.RemoveOccupants(total);
     }
 
-    public async Task<bool> ScheduleElevator(int floor, int totalWaiting)
+    public async Task<Elevator> ScheduleElevator(int floor)
     {
         Elevator nearestElevator = null;
+        Floor destinationFloor = _floorController.GetFloor(floor);
         int shortestDistance = FloorCount + 1;
+        int totalWaiting = destinationFloor.GetPeopleOnFloor();
 
         // Find the nearest available elevator
         foreach (Elevator elevator in Elevators)
         {
-            int distance = floor - elevator.ElevatorModel.CurrentFloor;
+            int distance = Math.Abs(floor - elevator.ElevatorModel.CurrentFloor);
 
-            if (distance < 0) //
+            /*if (distance < 0) //
             {
                 if (elevator.ElevatorModel.CurrentStatus == Status.IDLE
                       && elevator.ElevatorModel.CurrentDirection == Direction.NONE
@@ -62,8 +66,10 @@ public class ElevatorController : IElevatorController
                         shortestDistance = distance;
                     }
                 }
-            }
-            else if (distance == 0)
+            }*/
+            if (distance == 0 
+                     && elevator.ElevatorModel.Occupancy.Count + totalWaiting <= elevator.ElevatorModel.Capacity
+                     && nearestElevator == null)
             {
                 nearestElevator = elevator;
                 shortestDistance = distance;
@@ -71,18 +77,24 @@ public class ElevatorController : IElevatorController
             else
             {
                 //Go up
-                if (elevator.ElevatorModel.CurrentStatus == Status.MOVING
-                    && elevator.ElevatorModel.CurrentDirection == Direction.UP
-                    && (elevator.ElevatorModel.Occupancy.Count + totalWaiting) <= elevator.ElevatorModel.Capacity
-                    && distance <= 2)
+                if (elevator.ElevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.UP } 
+                    && (elevator.ElevatorModel.Occupancy.Count + totalWaiting) <= elevator.ElevatorModel.Capacity 
+                    && distance <= 3)
                 {
                     // elevator.ElevatorModel.destinationFloors.Add(_floorController.GetFloor(floor));
                     nearestElevator = elevator;
                     break;
                 }
-                else if (elevator.ElevatorModel.CurrentStatus == Status.IDLE
-                     && elevator.ElevatorModel.CurrentDirection == Direction.NONE
-                    && elevator.ElevatorModel.Occupancy.Count + totalWaiting <= elevator.ElevatorModel.Capacity)
+                else if (elevator.ElevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.DOWN } 
+                         && (elevator.ElevatorModel.Occupancy.Count + totalWaiting) <= elevator.ElevatorModel.Capacity 
+                         && distance <= 3)
+                {
+                    // elevator.ElevatorModel.destinationFloors.Add(_floorController.GetFloor(floor));
+                    nearestElevator = elevator;
+                    break;
+                }
+                else if (elevator.ElevatorModel is { CurrentStatus: Status.IDLE, CurrentDirection: Direction.NONE } 
+                         && elevator.ElevatorModel.Occupancy.Count + totalWaiting <= elevator.ElevatorModel.Capacity)
                 {
                     if (distance < shortestDistance)
                     {
@@ -105,21 +117,21 @@ public class ElevatorController : IElevatorController
             //}           
         }
 
-        // Move the nearest available elevator to the requested floor
+        // Notify the nearest available elevator to the requested floor
         if (nearestElevator != null)
         {
-            nearestElevator.ElevatorModel.destinationFloors.Add(_floorController.GetFloor(floor));
-            var peopleAtFloor = _floorController.GetPeopleWaiting(floor);
-            nearestElevator.AddOccupants(peopleAtFloor);
-            _floorController.RemovePeople(floor, peopleAtFloor);
+            nearestElevator.ElevatorModel.destinationFloors.Add(destinationFloor);
+            //var peopleAtFloor = _floorController.GetPeopleWaiting(floor);
+            //nearestElevator.AddOccupants(peopleAtFloor);
+            //_floorController.RemovePeople(floor, peopleAtFloor);
 
             //await nearestElevator.MoveTo(floor);
-            return true;
+            return nearestElevator;
         }
         else
         {
             Console.WriteLine("No available elevators.");
-            return false;
+            return null;
         }
     }
 
@@ -127,7 +139,7 @@ public class ElevatorController : IElevatorController
     {
         foreach (var elevator in Elevators)
         {
-            await elevator.Move();
+            await elevator.Notify();
         }
-    }0
+    }
 }

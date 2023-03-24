@@ -2,10 +2,11 @@ namespace ElevatorSim.Models;
 
 public class ElevatorModel
 {
-    public ElevatorModel(int id, int capacity)
+    public ElevatorModel(int id, int capacity, int totalFloors)
     {
         this.ID = id;
         this.Capacity = capacity;
+        this.totalFloors = totalFloors;
     }
 
     public int ID { get; set; }
@@ -16,4 +17,6 @@ public class ElevatorModel
     public int Capacity { get; init; } = 5;
 
     public List<Floor> destinationFloors = new List<Floor>();
+
+    public int totalFloors = 0;
 }

@@ -6,7 +6,7 @@ public interface IElevatorController
 {
     void SetupElevators();
 
-    Task<bool> ScheduleElevator(int floor, int totalWaiting);
+    Task<Elevator> ScheduleElevator(int floor);
 
     Task SendElevator();
 

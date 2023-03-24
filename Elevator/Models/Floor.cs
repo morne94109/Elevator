@@ -16,3 +16,11 @@ public class Floor
         this.Num_People = floor.Num_People;
     }
 }
+
+public static class FloorExtensions
+{
+    public static int GetPeopleOnFloor(this Floor floor)
+    {
+        return floor.Num_People.Count;
+    }
+}
