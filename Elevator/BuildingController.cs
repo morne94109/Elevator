@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,7 @@ namespace ElevatorSim.Models
         private readonly IFloorController _floorController;
         private readonly Config _config;
         private readonly IAppLogger _logger;
+        private ConcurrentQueue<int>  _floorQueue = new ConcurrentQueue<int>();
 
         public List<Elevator> Elevators { get; set; }
 
@@ -36,11 +38,14 @@ namespace ElevatorSim.Models
         // Method to call an elevator to a specific floor
         public async Task CallElevator(int floor)
         {
-            Elevator result = await _elevatorController.ScheduleElevator(floor);
-
-            if (result != null && result.ElevatorModel.CurrentStatus != Status.MOVING)
+            if(_floorQueue.Any(x => x == floor))
             {
-                result.Notify();
+                _logger.LogMessage("Floor already scheduled for pickup. Will not add to queue.");
+                
+            }
+            else
+            {
+                _floorQueue.Enqueue(floor);
             }
         }
 
@@ -51,6 +56,29 @@ namespace ElevatorSim.Models
             string floorResponse = await _floorController.GetFloorsStatus();
 
             return elevatorResponse + Environment.NewLine + floorResponse;
+        }
+
+        public async Task ScheduleAndNotifyElevator(int floor)
+        {
+            Elevator result = await _elevatorController.ScheduleElevator(floor);
+
+            if (result != null && result.ElevatorModel.CurrentStatus != Status.MOVING)
+            {                      
+                _ = result.Notify();
+            }
+        }
+
+        public Task<int> GetNextFromQueue()
+        {
+            if (_floorQueue.IsEmpty == false)
+            {
+                if (_floorQueue.TryDequeue(out int floor))
+                {
+                    return Task.FromResult(floor);
+                }
+            }
+
+            return Task.FromResult(-1);
         }
     }
 }

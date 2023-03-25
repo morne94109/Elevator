@@ -8,36 +8,52 @@ using ElevatorSim.Models;
 using ElevatorSim.Logger;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace ElevatorSim
 {
     public class Start
     {
         private static Config elevatorConfig;
-        
-        
+
+
         static async Task Main(string[] args)
         {
             ParseConfigFile();
-            
-            var serviceProvider = new ServiceCollection()
-                .AddSingleton<IElevatorController,ElevatorController>()
-                .AddSingleton<IFloorController,FloorController>()
-                .AddSingleton<IBuildingController,BuildingController>()
-                .AddSingleton<Config>(elevatorConfig)
-                .AddTransient<IAppLogger,AppLogger>()
-                .BuildServiceProvider();
 
+            var host = new HostBuilder()
+                .ConfigureHostConfiguration(configHost =>
+                {
+
+                })
+                .ConfigureServices((hostContext, services) =>
+                {
+                    services.AddSingleton<IElevatorController, ElevatorController>();
+                    services.AddSingleton<IFloorController, FloorController>();
+                    services.AddSingleton<IBuildingController, BuildingController>();
+                    services.AddSingleton<Config>(elevatorConfig);
+                    services.AddTransient<IAppLogger, AppLogger>();
+                    services.AddHostedService<BuildingBackgroundService>();
+                })
+                .UseConsoleLifetime()
+                .Build();
+
+          
+
+            host.RunAsync();
+
+            var serviceProvider = host.Services;
+   
             IBuildingController buildingController = serviceProvider.GetRequiredService<IBuildingController>();
 
             buildingController.CreateBuilding();
-            
+
             Console.WriteLine("We are done!\n");
 
             bool exit = false;
             while (exit == false)
             {
-                
+
                 Console.WriteLine("---------------------------------------");
                 Console.WriteLine("---------- 1: Call Elevator   ---------");
                 Console.WriteLine("---------- 2: Get Status      ---------");
@@ -53,7 +69,7 @@ namespace ElevatorSim
                             CallElevator(buildingController);
                             break;
                         case 2:
-                             await GetStatus(buildingController);
+                            await GetStatus(buildingController);
                             break;
                         case 99:
                             exit = true;
@@ -61,13 +77,13 @@ namespace ElevatorSim
                         default:
                             Console.WriteLine("Invalid choice! Please choice from menu.");
                             break;
-                        
+
                     }
                 }
             }
 
-          
-          
+
+
             Console.WriteLine("Hello");
         }
 
@@ -97,30 +113,33 @@ namespace ElevatorSim
                     Console.WriteLine("Which floor are you on?");
                 }
 
-                Task.Run(async () =>
+                if (userFloor != 99)
                 {
-                    try
+                    Task.Run(async () =>
                     {
-                        await buildingController.CallElevator(userFloor);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine();
-                    }
-                });
+                        try
+                        {
+                            await buildingController.CallElevator(userFloor);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine();
+                        }
+                    });
+                }
             }
         }
 
         private static void ParseConfigFile()
         {
             string fileName = "appsettings.json";
-            
+
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile(fileName);
-            
+
             var configuration = builder.Build();
-            
+
             string stringFloors = configuration["num_floors"];
             if (int.TryParse(stringFloors, out int numFloors) == false)
             {
