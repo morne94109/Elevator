@@ -17,4 +17,6 @@ public interface IFloorController
     void RemovePeople(int floor);
     void RemovePeople(int floor, List<People> peopleList);
 
+    Task<string> GetFloorsStatus();
+
 }

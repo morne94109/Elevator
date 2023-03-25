@@ -92,6 +92,17 @@ public class FloorController : IFloorController
         
     }
 
+    public async Task<string> GetFloorsStatus()
+    {
+        string message = "Floor status ---------------------";
+
+        foreach (var floor in _floors)
+        {
+            message += Environment.NewLine + $"Floor {floor.ID,5} | Waiting: {floor.Num_People.Count,3}";
+        }
+
+        return message;
+    }
 
 
 }

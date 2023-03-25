@@ -25,7 +25,7 @@ namespace ElevatorSim
                 .AddSingleton<IFloorController,FloorController>()
                 .AddSingleton<IBuildingController,BuildingController>()
                 .AddSingleton<Config>(elevatorConfig)
-                .AddSingleton<IAppLogger,AppLogger>()
+                .AddTransient<IAppLogger,AppLogger>()
                 .BuildServiceProvider();
 
             IBuildingController buildingController = serviceProvider.GetRequiredService<IBuildingController>();
@@ -33,16 +33,63 @@ namespace ElevatorSim
             buildingController.CreateBuilding();
             
             Console.WriteLine("We are done!\n");
-            
+
+            bool exit = false;
+            while (exit == false)
+            {
+                
+                Console.WriteLine("---------------------------------------");
+                Console.WriteLine("---------- 1: Call Elevator   ---------");
+                Console.WriteLine("---------- 2: Get Status      ---------");
+                Console.WriteLine("---------------------------------------");
+
+                string userResponse = Console.ReadLine();
+
+                if (int.TryParse(userResponse, out int choice))
+                {
+                    switch (choice)
+                    {
+                        case 1:
+                            CallElevator(buildingController);
+                            break;
+                        case 2:
+                             await GetStatus(buildingController);
+                            break;
+                        case 99:
+                            exit = true;
+                            break;
+                        default:
+                            Console.WriteLine("Invalid choice! Please choice from menu.");
+                            break;
+                        
+                    }
+                }
+            }
+
+          
+          
+            Console.WriteLine("Hello");
+        }
+
+        private static async Task GetStatus(IBuildingController buildingController)
+        {
+            string response = await buildingController.GetBuildingStatus();
+            Console.WriteLine(response);
+        }
+
+        private static void CallElevator(IBuildingController buildingController)
+        {
             int maxRetries = 5;
             int retries = 0;
             int userFloor = 0;
             while (userFloor != 99)
             {
                 Console.WriteLine("Which floor are you on? (Enter 99 if you are done!)");
-                
+
                 while (int.TryParse(Console.ReadLine(), out userFloor) == false || (retries < maxRetries &&
-                           (userFloor < 0 || userFloor > elevatorConfig.GetNumFloors())))
+                           (userFloor < 0 ||
+                            userFloor > elevatorConfig
+                                .GetNumFloors() && userFloor != 99)))
                 {
                     retries++;
                     Console.WriteLine(
@@ -50,7 +97,7 @@ namespace ElevatorSim
                     Console.WriteLine("Which floor are you on?");
                 }
 
-                Task.Run(async() =>
+                Task.Run(async () =>
                 {
                     try
                     {
@@ -62,9 +109,8 @@ namespace ElevatorSim
                     }
                 });
             }
-
-            Console.WriteLine("Hello");
         }
+
         private static void ParseConfigFile()
         {
             string fileName = "appsettings.json";

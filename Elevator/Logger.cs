@@ -25,3 +25,11 @@ public class AppLogger : IAppLogger
         Log.Debug(message);
     }
 }
+
+public static class LoggerExtensions
+{
+    public static void LogMessage(this ILogger logger, string message)
+    {
+        logger.Debug(message);
+    }
+}

@@ -14,4 +14,6 @@ public interface IElevatorController
     void AddOccupant(Elevator current, int total);
 
     void RemoveOccupant(Elevator current, int total);
+
+    Task<string> GetElevatorStatus();
 }

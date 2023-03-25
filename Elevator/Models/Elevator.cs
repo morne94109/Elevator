@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ElevatorSim.Contracts;
+using ElevatorSim.Logger;
+using Serilog;
 
 namespace ElevatorSim.Models
 {
@@ -11,14 +13,18 @@ namespace ElevatorSim.Models
     public class Elevator
     {
         private readonly ElevatorModel _elevatorModel;
-        private readonly IAppLogger _logger;
+        //private readonly IAppLogger _logger;
         private readonly IFloorController _floorController;
 
-        public Elevator(int id, int capacity, IAppLogger logger, int totalFloors, IFloorController floorController)
+        public Elevator(int id, 
+            int capacity,
+            int totalFloors,
+            IFloorController floorController)
         {
             _elevatorModel = new ElevatorModel(id, capacity, totalFloors);
-            _logger = logger;
             _floorController = floorController;
+            SetupLogger(id);
+            objectLogger.LogMessage($"Installation completed @ {DateTimeOffset.Now}!");
         }
 
         public ElevatorModel ElevatorModel
@@ -26,6 +32,15 @@ namespace ElevatorSim.Models
             get { return _elevatorModel; }
         }
 
+        private ILogger objectLogger = null;
+        public void SetupLogger(int id)
+        {
+            
+            objectLogger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.File($"logs/elevator-{id}-.txt", rollingInterval: RollingInterval.Day)
+                .CreateLogger();
+        }
         // Method to move the elevator
         public async Task Notify()
         { 
@@ -39,7 +54,7 @@ namespace ElevatorSim.Models
                     int elevatorID = _elevatorModel.ID;
                     if (ElevatorModel.CurrentFloor == floor)
                     {
-                        _logger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
+                        objectLogger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
                         // ElevatorModel.CurrentStatus = Status.IDLE;
                         // ElevatorModel.CurrentDirection = Direction.NONE;
                         
@@ -54,7 +69,7 @@ namespace ElevatorSim.Models
                     }
                     else
                     {
-                        _logger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
+                        objectLogger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
                         ElevatorModel.CurrentStatus = Status.MOVING;
 
                         if (ElevatorModel.CurrentFloor < floor)
@@ -65,7 +80,7 @@ namespace ElevatorSim.Models
 
                                 DepartFromElevator(floorModel, i);
                                 ElevatorModel.CurrentFloor = i;
-                                _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
+                                objectLogger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
                                 if (ElevatorModel.CurrentFloor != floor)
                                 {
                                     await SimulateMoveDelay();
@@ -90,7 +105,7 @@ namespace ElevatorSim.Models
                             {
                                 DepartFromElevator(floorModel, i);
                                 ElevatorModel.CurrentFloor = i;
-                                _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
+                                objectLogger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
                                 if (ElevatorModel.CurrentFloor != floor)
                                 {
                                     await SimulateMoveDelay();
@@ -111,7 +126,7 @@ namespace ElevatorSim.Models
 
                     ElevatorModel.CurrentStatus = Status.IDLE;
                     ElevatorModel.CurrentDirection = Direction.NONE;
-                    _logger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
+                    objectLogger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
                     ElevatorModel.destinationFloors.Remove(floorModel);
                 }
                 floorList = new List<Floor>(_elevatorModel.destinationFloors);
@@ -167,7 +182,7 @@ namespace ElevatorSim.Models
             }
             else
             {
-                _logger.LogMessage("Elevator is at maximum capacity.");
+                objectLogger.LogMessage("Elevator is at maximum capacity.");
                 return false;
             }
         }

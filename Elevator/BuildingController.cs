@@ -43,5 +43,14 @@ namespace ElevatorSim.Models
                 result.Notify();
             }
         }
+
+        public async Task<string> GetBuildingStatus()
+        {
+            string elevatorResponse = await _elevatorController.GetElevatorStatus();
+            
+            string floorResponse = await _floorController.GetFloorsStatus();
+
+            return elevatorResponse + Environment.NewLine + floorResponse;
+        }
     }
 }

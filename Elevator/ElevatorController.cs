@@ -18,11 +18,12 @@ public class ElevatorController : IElevatorController
         _logger.LogMessage($"Building elevators.");
         for (int i = 0; i < _config.GetNumElevators(); i++)
         {
-            Elevators.Add(new Elevator(i + 1, _config.GetCapacity(), _logger, FloorCount, _floorController));
+            Elevators.Add(new Elevator(i + 1, _config.GetCapacity(), FloorCount, _floorController));
             _logger.LogMessage($"Elevator {i + 1} has been installed.");
         }
+
         _logger.LogMessage("Installation of all elevators completed.");
-       
+
     }
 
     public ElevatorController(Config config, IAppLogger logger, IFloorController floorController)
@@ -39,7 +40,7 @@ public class ElevatorController : IElevatorController
 
     public void RemoveOccupant(Elevator current, int total)
     {
-       // current.RemoveOccupants(total);
+        // current.RemoveOccupants(total);
     }
 
     public async Task<Elevator> ScheduleElevator(int floor)
@@ -67,9 +68,9 @@ public class ElevatorController : IElevatorController
                     }
                 }
             }*/
-            if (distance == 0 
-                     && elevator.ElevatorModel.Occupancy.Count + totalWaiting <= elevator.ElevatorModel.Capacity
-                     && nearestElevator == null)
+            if (distance == 0
+                && elevator.ElevatorModel.Occupancy.Count + totalWaiting <= elevator.ElevatorModel.Capacity
+                && nearestElevator == null)
             {
                 nearestElevator = elevator;
                 shortestDistance = distance;
@@ -77,23 +78,23 @@ public class ElevatorController : IElevatorController
             else
             {
                 //Go up
-                if (elevator.ElevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.UP } 
-                    && (elevator.ElevatorModel.Occupancy.Count + totalWaiting) <= elevator.ElevatorModel.Capacity 
+                if (elevator.ElevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.UP }
+                    && (elevator.ElevatorModel.Occupancy.Count + totalWaiting) <= elevator.ElevatorModel.Capacity
                     && distance <= 3)
                 {
                     // elevator.ElevatorModel.destinationFloors.Add(_floorController.GetFloor(floor));
                     nearestElevator = elevator;
                     break;
                 }
-                else if (elevator.ElevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.DOWN } 
-                         && (elevator.ElevatorModel.Occupancy.Count + totalWaiting) <= elevator.ElevatorModel.Capacity 
+                else if (elevator.ElevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.DOWN }
+                         && (elevator.ElevatorModel.Occupancy.Count + totalWaiting) <= elevator.ElevatorModel.Capacity
                          && distance <= 3)
                 {
                     // elevator.ElevatorModel.destinationFloors.Add(_floorController.GetFloor(floor));
                     nearestElevator = elevator;
                     break;
                 }
-                else if (elevator.ElevatorModel is { CurrentStatus: Status.IDLE, CurrentDirection: Direction.NONE } 
+                else if (elevator.ElevatorModel is { CurrentStatus: Status.IDLE, CurrentDirection: Direction.NONE }
                          && elevator.ElevatorModel.Occupancy.Count + totalWaiting <= elevator.ElevatorModel.Capacity)
                 {
                     if (distance < shortestDistance)
@@ -141,5 +142,24 @@ public class ElevatorController : IElevatorController
         {
             await elevator.Notify();
         }
+    }
+
+    public async Task<string> GetElevatorStatus()
+    {
+        string message = "Elevator status ---------------------";
+
+        foreach (var elevator in Elevators)
+        {
+            
+            message += Environment.NewLine 
+                        + $"Elevator: {elevator.ElevatorModel.ID,5}" 
+                        + $" | Floor: {elevator.ElevatorModel.CurrentFloor,5}"
+                        + $" | Status: {elevator.ElevatorModel.CurrentStatus,5}"
+                        + $" | Direction: {elevator.ElevatorModel.CurrentDirection,5}" 
+                        + $" | Occupancy: {elevator.ElevatorModel.Occupancy.Count,5}" 
+                        + $" | Total Floors scheduled: {string.Join(",",elevator.ElevatorModel.destinationFloors.Select(x => x.ID)),10}";
+        }
+
+        return message;
     }
 }
