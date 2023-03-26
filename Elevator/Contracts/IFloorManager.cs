@@ -3,7 +3,7 @@ using ElevatorSim.Models;
 
 namespace ElevatorSim.Contracts;
 
-public interface IFloorController
+public interface IFloorManager
 {
     void SetupFloors(bool setupPeople = true);
 

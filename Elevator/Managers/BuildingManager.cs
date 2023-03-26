@@ -2,33 +2,36 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using ElevatorSim.Contracts;
+using ElevatorSim.Models;
+[assembly: InternalsVisibleTo("ElevatorUnitTests")]
 
-namespace ElevatorSim.Models
+namespace ElevatorSim.Managers
 {
     internal class BuildingManager : IBuildingManager
     {
         private readonly IElevatorManager _elevatorController;
-        private readonly IFloorController _floorController;
+        private readonly IFloorManager _floorManager;
         private readonly IAppLogger _logger;
         private ConcurrentQueue<int>  _floorQueue = new ConcurrentQueue<int>();
 
         // Constructor
-        public BuildingManager(IElevatorManager elevatorController,
-            IFloorController floorController,
+        public BuildingManager(IElevatorManager elevatorManager,
+            IFloorManager floorController,
             IAppLogger logger)
         {
-            _elevatorController = elevatorController;
-            _floorController = floorController;           
+            _elevatorController = elevatorManager;
+            _floorManager = floorController;           
             _logger = logger;
         }
 
         public void CreateBuilding()
         {
             _logger.LogMessage("Staring building construction!");
-            _floorController.SetupFloors();
+            _floorManager.SetupFloors();
             _elevatorController.SetupElevators();
         }
 
@@ -52,7 +55,7 @@ namespace ElevatorSim.Models
         {
             string elevatorResponse = await _elevatorController.GetElevatorStatus();
             
-            string floorResponse = await _floorController.GetFloorsStatus();
+            string floorResponse = await _floorManager.GetFloorsStatus();
 
             return elevatorResponse + Environment.NewLine + floorResponse;
         }

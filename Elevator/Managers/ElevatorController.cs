@@ -6,20 +6,21 @@ using System.Threading.Tasks;
 using Elevator.Models;
 using ElevatorSim.Contracts;
 using ElevatorSim.Logger;
+using ElevatorSim.Models;
 using Serilog;
 
-namespace ElevatorSim.Models
+namespace ElevatorSim.Managers
 {
 
     internal class ElevatorController : IElevatorController
     {
         private readonly ElevatorModel _elevatorModel;
-        private readonly IFloorController _floorController;
+        private readonly IFloorManager _floorController;
         private readonly IBuildingManager _buildingManager;
         private readonly ILogger _logger;
 
         public ElevatorController(Config config,
-            IFloorController floorController,
+            IFloorManager floorController,
             IBuildingManager buildingManager)
         {
             _elevatorModel = new ElevatorModel(config.GetCapacity(), config.GetNumFloors());

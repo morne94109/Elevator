@@ -3,10 +3,14 @@ using ElevatorSim.Contracts;
 using ElevatorSim.Models;
 using System.Linq;
 using Elevator.Models;
+using System.Runtime.CompilerServices;
 
-namespace ElevatorSim;
+[assembly: InternalsVisibleTo("ElevatorUnitTests")]
 
-public class FloorManager : IFloorController
+namespace ElevatorSim.Managers;
+
+
+internal class FloorManager : IFloorManager
 {
     private Config _config;
     private IAppLogger _logger;

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ElevatorSim
+namespace ElevatorSim.BackgroungServices
 {
     public class BuildingBackgroundService : IHostedService, IDisposable
     {

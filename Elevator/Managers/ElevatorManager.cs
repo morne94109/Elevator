@@ -1,14 +1,16 @@
 using ElevatorSim.Contracts;
 using ElevatorSim.Models;
 using Microsoft.Extensions.DependencyInjection;
+using System.Runtime.CompilerServices;
 
-namespace ElevatorSim;
+[assembly: InternalsVisibleTo("ElevatorUnitTests")]
+namespace ElevatorSim.Managers;
 
-public class ElevatorManager : IElevatorManager
+internal class ElevatorManager : IElevatorManager
 {
     private Config _config;
     private IAppLogger _logger;
-    private readonly IFloorController _floorController;
+    private readonly IFloorManager _floorController;
     private readonly IServiceProvider _serviceProvider;
     List<IElevatorController> Elevators = new List<IElevatorController>();
     public int FloorCount { get; set; }
@@ -29,7 +31,7 @@ public class ElevatorManager : IElevatorManager
 
     }
 
-    public ElevatorManager(Config config, IAppLogger logger, IFloorController floorController, IServiceProvider serviceProvider)
+    public ElevatorManager(Config config, IAppLogger logger, IFloorManager floorController, IServiceProvider serviceProvider)
     {
         _config = config;
         _logger = logger;

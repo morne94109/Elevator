@@ -9,6 +9,8 @@ using ElevatorSim.Logger;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ElevatorSim.BackgroungServices;
+using ElevatorSim.Managers;
 
 namespace ElevatorSim
 {
@@ -29,7 +31,7 @@ namespace ElevatorSim
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddSingleton<IElevatorManager, ElevatorManager>();
-                    services.AddSingleton<IFloorController, FloorManager>();
+                    services.AddSingleton<IFloorManager, FloorManager>();
                     services.AddSingleton<IBuildingManager, BuildingManager>();
                     services.AddSingleton<Config>(elevatorConfig);
                     services.AddTransient<IAppLogger, AppLogger>();
