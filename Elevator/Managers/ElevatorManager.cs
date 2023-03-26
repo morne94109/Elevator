@@ -54,13 +54,13 @@ internal class ElevatorManager : IElevatorManager
             {
                 int distance = Math.Abs(floor - elevator.ElevatorModel.CurrentFloor);
                 ElevatorModel elevatorModel = elevator.ElevatorModel;
-                int totalAlreadyWaitding = 0;
+                int totalAlreadyWaiting = 0;
                 elevatorModel.destinationFloors.ForEach(f =>
                 {
-                    totalAlreadyWaitding += f.Num_People.Count;
+                    totalAlreadyWaiting += f.Num_People.Count;
                 });
 
-                int tempOccupancy = elevatorModel.Occupancy.Count + totalAlreadyWaitding;
+                int tempOccupancy = elevatorModel.Occupancy.Count + totalAlreadyWaiting;
 
 
                 if (distance == 0
@@ -75,7 +75,7 @@ internal class ElevatorManager : IElevatorManager
                         && distance <= distanceLeeway)
                 {
 
-                    if (elevatorModel.Occupancy.Count + totalAlreadyWaitding <= elevatorModel.Capacity)
+                    if (elevatorModel.Occupancy.Count + totalAlreadyWaiting <= elevatorModel.Capacity)
                     {
                         nearestElevator = elevator;
                     }
@@ -110,9 +110,16 @@ internal class ElevatorManager : IElevatorManager
         // Notify the nearest available elevator to the requested floor
         if (nearestElevator != null)
         {
-            if (nearestElevator.ElevatorModel.destinationFloors.FirstOrDefault(x => x.ID == destinationFloor.ID) == null)
+            Floor tempFloor =
+                nearestElevator.ElevatorModel.destinationFloors.FirstOrDefault(x => x.ID == destinationFloor.ID);
+            
+            if (tempFloor == null)
             {
                 nearestElevator.ElevatorModel.destinationFloors.Add(destinationFloor);
+            }
+            else if (tempFloor.Num_People.Count == 0 )
+            {
+                tempFloor.Num_People = destinationFloor.Num_People;
             }
            
             return Task.FromResult(nearestElevator);

@@ -63,7 +63,8 @@ namespace ElevatorSim.Managers
                             people.OnElevator = true;
                         }
                         AddOccupants(waitingPeople);
-                        await SimulateBoardingDelay();
+                        _logger.LogMessage($"New occupants");
+                       // await SimulateBoardingDelay();
 
                     }
                     else
@@ -93,6 +94,7 @@ namespace ElevatorSim.Managers
                                     }
 
                                     AddOccupants(waitingPeople);
+                                    _logger.LogMessage($"New occupants");
                                 }
                             }
 
@@ -107,6 +109,7 @@ namespace ElevatorSim.Managers
                                 _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
                                 if (ElevatorModel.CurrentFloor != floor)
                                 {
+                                    _logger.LogMessage($"SimulateMoveDelay");
                                     await SimulateMoveDelay();
                                 }
                                 else
@@ -117,7 +120,9 @@ namespace ElevatorSim.Managers
                                         people.OnElevator = true;
                                     }
 
+                                    
                                     AddOccupants(waitingPeople);
+                                    _logger.LogMessage($"New occupants");
                                 }
                             }
                         }
@@ -158,12 +163,14 @@ namespace ElevatorSim.Managers
         {
             if (ElevatorModel.Occupancy.Count + listOfPeople.Count <= ElevatorModel.Capacity)
             {
+                _logger.LogMessage("1");
                 ElevatorModel.Occupancy.AddRange(listOfPeople);
                 _floorController.RemovePeople(_elevatorModel.CurrentFloor, listOfPeople);
                 foreach (var people in listOfPeople)
                 {
                     if (_elevatorModel.destinationFloors.Exists(x => x.ID == people.DestinationFloor) == false)
                     {
+                        //Only add as drop off, not pickup as floor wasn't requested for pickup.
                         _elevatorModel.destinationFloors.Add(new Floor(people.DestinationFloor));
                     }
                 }

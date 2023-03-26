@@ -43,7 +43,7 @@ internal class FloorManager : IFloorManager
         for (int i = 0; i < _floors.Count; i++)
         {
             var random = new Random();
-            var randomNum = random.Next(0, 4);
+            var randomNum = random.Next(0, 6);
             People people = new People();
             for (int z = 0; z < randomNum; z++)
             {

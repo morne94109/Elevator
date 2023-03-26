@@ -68,6 +68,11 @@ namespace ElevatorSim.Managers
             {                      
                 _ = result.Notify();
             }
+            else if(result == null)
+            {
+                _logger.LogMessage($"Unable to find elevator available for floor {floor}. Add back into queue.");
+                await CallElevator(floor);
+            }
         }
 
         public Task<int> GetNextFromQueue()
