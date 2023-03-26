@@ -11,21 +11,21 @@ namespace ElevatorSim
 {
     public class BuildingBackgroundService : IHostedService, IDisposable
     {
-        private IBuildingController _buildingController { get; }
+        private IBuildingManager _buildingController { get; }
         private Timer? _timer = null;
-        private ILogger logger = null;
+        private ILogger _logger;
 
-        public BuildingBackgroundService(IBuildingController buildingController1)
+        public BuildingBackgroundService(IBuildingManager buildingController1)
         {
             _buildingController = buildingController1;
-            SetupLogger();
+            _logger = SetupLogger();
         }
 
       
-        public void SetupLogger()
+        public ILogger SetupLogger()
         {
 
-            logger = new LoggerConfiguration()
+            return new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.File($"logs/Building-BackgroundService-.txt", rollingInterval: RollingInterval.Day)
                 .CreateLogger();
@@ -39,22 +39,22 @@ namespace ElevatorSim
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            logger.Debug("Timed Hosted Service running.");
+            _logger.Debug("Timed Hosted Service running.");
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero,
-                TimeSpan.FromSeconds(5));
+                TimeSpan.FromSeconds(2));
 
             return Task.CompletedTask;
         }
 
         private async void DoWork(object? state)
         {
-            logger.Debug("Checking for floors to pickup people");
+            _logger.Debug("Checking for floors to pickup people");
 
             int floor = await _buildingController.GetNextFromQueue();
             if(floor == -1)
             {
-                logger.Debug("Found to floors requiring pickup.");
+                _logger.Debug("Found to floors requiring pickup.");
             }
             else
             {
@@ -64,7 +64,7 @@ namespace ElevatorSim
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            logger.Debug("Timed Hosted Service is stopping.");
+            _logger.Debug("Timed Hosted Service is stopping.");
 
             _timer?.Change(Timeout.Infinite, 0);
 

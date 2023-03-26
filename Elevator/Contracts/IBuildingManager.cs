@@ -1,6 +1,6 @@
 namespace ElevatorSim.Contracts;
 
-public interface IBuildingController
+public interface IBuildingManager
 {
     void CreateBuilding();
     Task CallElevator(int floor);

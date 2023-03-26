@@ -2,16 +2,17 @@ using System.Collections.Concurrent;
 using ElevatorSim.Contracts;
 using ElevatorSim.Models;
 using System.Linq;
+using Elevator.Models;
 
 namespace ElevatorSim;
 
-public class FloorController : IFloorController
+public class FloorManager : IFloorController
 {
     private Config _config;
     private IAppLogger _logger;
     private List<Floor> _floors = new List<Floor>();
 
-    public FloorController(Config config, IAppLogger logger)
+    public FloorManager(Config config, IAppLogger logger)
     {
         _config = config;
         _logger = logger;
@@ -26,6 +27,7 @@ public class FloorController : IFloorController
             _logger.LogMessage($"Floor {i} has been completed.");
         }
         _logger.LogMessage("Setup completed of floors for building.");
+        
         if (setupPeople)
         {
             PopulteFloors();
@@ -53,7 +55,6 @@ public class FloorController : IFloorController
                 people.OnElevator = false;
                 _floors[i].Num_People.Add(people);
             }
-
         }
     }
 
@@ -87,12 +88,10 @@ public class FloorController : IFloorController
 
     public void RemovePeople(int floor)
     {
-
-        _floors[floor].Num_People = new List<People>();
-        
+        _floors[floor].Num_People = new List<People>();        
     }
 
-    public async Task<string> GetFloorsStatus()
+    public Task<string> GetFloorsStatus()
     {
         string message = "Floor status ---------------------";
 
@@ -101,8 +100,6 @@ public class FloorController : IFloorController
             message += Environment.NewLine + $"Floor {floor.ID,5} | Waiting: {floor.Num_People.Count,3}";
         }
 
-        return message;
+        return Task.FromResult(message);
     }
-
-
 }

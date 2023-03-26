@@ -1,15 +1,17 @@
+using Elevator.Models;
+
 namespace ElevatorSim.Models;
 
 public class ElevatorModel
 {
-    public ElevatorModel(int id, int capacity, int totalFloors)
+    public ElevatorModel(int capacity, int totalFloors)
     {
-        this.ID = id;
+        this.ID = Guid.NewGuid().ToString().Substring(0,8);
         this.Capacity = capacity;
         this.totalFloors = totalFloors;
     }
 
-    public int ID { get; set; }
+    public string ID { get; set; }
     public Status CurrentStatus { get; set; } = Status.IDLE;
     public Direction CurrentDirection { get; set; } = Direction.NONE;
     public int CurrentFloor { get; set; } = 0;

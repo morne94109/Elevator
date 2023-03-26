@@ -1,15 +1,16 @@
 using ElevatorSim.Contracts;
 using ElevatorSim.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ElevatorSim;
 
-public class ElevatorController : IElevatorController
+public class ElevatorManager : IElevatorManager
 {
     private Config _config;
     private IAppLogger _logger;
     private readonly IFloorController _floorController;
     private readonly IServiceProvider _serviceProvider;
-    List<Elevator> Elevators = new List<Elevator>();
+    List<IElevatorController> Elevators = new List<IElevatorController>();
     public int FloorCount { get; set; }
 
     public void SetupElevators()
@@ -18,43 +19,36 @@ public class ElevatorController : IElevatorController
         _logger.LogMessage($"Building elevators.");
         for (int i = 0; i < _config.GetNumElevators(); i++)
         {
-            Elevators.Add(new Elevator(i + 1, _config.GetCapacity(), FloorCount, _floorController));
-            _logger.LogMessage($"Elevator {i + 1} has been installed.");
+            var elevator = _serviceProvider.GetRequiredService<IElevatorController>();
+            Elevators.Add(elevator);
+            //new ElevatorController(i + 1, _config.GetCapacity(), FloorCount, _floorController))
+            _logger.LogMessage($"Elevator {elevator.ElevatorModel.ID} has been installed.");
         }
 
         _logger.LogMessage("Installation of all elevators completed.");
 
     }
 
-    public ElevatorController(Config config, IAppLogger logger, IFloorController floorController)
+    public ElevatorManager(Config config, IAppLogger logger, IFloorController floorController, IServiceProvider serviceProvider)
     {
         _config = config;
         _logger = logger;
         _floorController = floorController;
+        _serviceProvider = serviceProvider;
     }
 
-    public void AddOccupant(Elevator current, int total)
+    public Task<IElevatorController> ScheduleElevator(int floor)
     {
-        //current.AddOccupants(total);
-    }
-
-    public void RemoveOccupant(Elevator current, int total)
-    {
-        // current.RemoveOccupants(total);
-    }
-
-    public async Task<Elevator> ScheduleElevator(int floor)
-    {
-        Elevator nearestElevator = null;
+        IElevatorController nearestElevator = null;
         Floor destinationFloor = _floorController.GetFloor(floor);
         int shortestDistance = FloorCount + 1;
         int totalWaiting = destinationFloor.GetPeopleOnFloor();
 
         int distanceLeeway = 3;
-        while (nearestElevator == null)
+        while (nearestElevator == null && distanceLeeway <= _config.GetNumFloors())
         {
             // Find the nearest available elevator
-            foreach (Elevator elevator in Elevators)
+            foreach (IElevatorController elevator in Elevators)
             {
                 int distance = Math.Abs(floor - elevator.ElevatorModel.CurrentFloor);
                 ElevatorModel elevatorModel = elevator.ElevatorModel;
@@ -119,24 +113,16 @@ public class ElevatorController : IElevatorController
                 nearestElevator.ElevatorModel.destinationFloors.Add(destinationFloor);
             }
            
-            return nearestElevator;
+            return Task.FromResult(nearestElevator);
         }
         else
         {
             Console.WriteLine("No available elevators.");
-            return null;
+            return Task.FromResult(nearestElevator);
         }
     }
 
-    public async Task SendElevator()
-    {
-        foreach (var elevator in Elevators)
-        {
-            await elevator.Notify();
-        }
-    }
-
-    public async Task<string> GetElevatorStatus()
+    public Task<string> GetElevatorStatus()
     {
         string message = "Elevator status ---------------------";
 
@@ -152,6 +138,6 @@ public class ElevatorController : IElevatorController
                         + $" | Total Floors scheduled: {string.Join(",", elevator.ElevatorModel.destinationFloors.Select(x => x.ID)),10}";
         }
 
-        return message;
+        return Task.FromResult(message);
     }
 }

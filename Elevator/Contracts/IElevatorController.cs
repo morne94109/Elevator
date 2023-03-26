@@ -1,19 +1,11 @@
-using ElevatorSim.Models;
+﻿using ElevatorSim.Models;
 
-namespace ElevatorSim.Contracts;
-
-public interface IElevatorController
+namespace ElevatorSim.Contracts
 {
-    void SetupElevators();
+    public interface IElevatorController
+    {
+        ElevatorModel ElevatorModel { get; }
 
-    Task<Elevator> ScheduleElevator(int floor);
-
-    Task SendElevator();
-
-
-    void AddOccupant(Elevator current, int total);
-
-    void RemoveOccupant(Elevator current, int total);
-
-    Task<string> GetElevatorStatus();
+        Task Notify();
+    }
 }

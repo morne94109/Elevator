@@ -8,23 +8,20 @@ using ElevatorSim.Contracts;
 
 namespace ElevatorSim.Models
 {
-    internal class BuildingController : IBuildingController
+    internal class BuildingManager : IBuildingManager
     {
-        private readonly IElevatorController _elevatorController;
+        private readonly IElevatorManager _elevatorController;
         private readonly IFloorController _floorController;
-        private readonly Config _config;
         private readonly IAppLogger _logger;
         private ConcurrentQueue<int>  _floorQueue = new ConcurrentQueue<int>();
 
-        public List<Elevator> Elevators { get; set; }
-
         // Constructor
-        public BuildingController(IElevatorController elevatorController, IFloorController floorController,
-            Config config, IAppLogger logger)
+        public BuildingManager(IElevatorManager elevatorController,
+            IFloorController floorController,
+            IAppLogger logger)
         {
             _elevatorController = elevatorController;
-            _floorController = floorController;
-            _config = config;
+            _floorController = floorController;           
             _logger = logger;
         }
 
@@ -36,17 +33,19 @@ namespace ElevatorSim.Models
         }
 
         // Method to call an elevator to a specific floor
-        public async Task CallElevator(int floor)
+        public Task CallElevator(int floor)
         {
             if(_floorQueue.Any(x => x == floor))
             {
-                _logger.LogMessage("Floor already scheduled for pickup. Will not add to queue.");
-                
+                _logger.LogMessage($"Floor {floor} already scheduled for pickup. Will not add to queue.");                
             }
             else
             {
                 _floorQueue.Enqueue(floor);
+                _logger.LogMessage($"Added floor {floor} to queue for pickup.");
             }
+
+            return Task.CompletedTask;
         }
 
         public async Task<string> GetBuildingStatus()
@@ -60,7 +59,7 @@ namespace ElevatorSim.Models
 
         public async Task ScheduleAndNotifyElevator(int floor)
         {
-            Elevator result = await _elevatorController.ScheduleElevator(floor);
+            IElevatorController result = await _elevatorController.ScheduleElevator(floor);
 
             if (result != null && result.ElevatorModel.CurrentStatus != Status.MOVING)
             {                      

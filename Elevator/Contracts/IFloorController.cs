@@ -1,3 +1,4 @@
+using Elevator.Models;
 using ElevatorSim.Models;
 
 namespace ElevatorSim.Contracts;

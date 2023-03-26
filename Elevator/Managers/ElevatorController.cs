@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Elevator.Models;
 using ElevatorSim.Contracts;
 using ElevatorSim.Logger;
 using Serilog;
@@ -10,40 +11,37 @@ using Serilog;
 namespace ElevatorSim.Models
 {
 
-    public class Elevator
+    internal class ElevatorController : IElevatorController
     {
         private readonly ElevatorModel _elevatorModel;
-        //private readonly IAppLogger _logger;
         private readonly IFloorController _floorController;
+        private readonly IBuildingManager _buildingManager;
+        private readonly ILogger _logger;
 
-        public Elevator(int id, 
-            int capacity,
-            int totalFloors,
-            IFloorController floorController)
+        public ElevatorController(Config config,
+            IFloorController floorController,
+            IBuildingManager buildingManager)
         {
-            _elevatorModel = new ElevatorModel(id, capacity, totalFloors);
+            _elevatorModel = new ElevatorModel(config.GetCapacity(), config.GetNumFloors());
             _floorController = floorController;
-            SetupLogger(id);
-            objectLogger.LogMessage($"Installation completed @ {DateTimeOffset.Now}!");
+            _buildingManager = buildingManager;
+            _logger = SetupLogger(_elevatorModel.ID);
+            _logger.LogMessage($"Installation completed @ {DateTimeOffset.Now}!");
         }
 
-        public ElevatorModel ElevatorModel
-        {
-            get { return _elevatorModel; }
-        }
+        public ElevatorModel ElevatorModel => _elevatorModel;
 
-        private ILogger objectLogger = null;
-        public void SetupLogger(int id)
+        public ILogger SetupLogger(string id)
         {
-            
-            objectLogger = new LoggerConfiguration()
+
+            return new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.File($"logs/elevator-{id}-.txt", rollingInterval: RollingInterval.Day)
                 .CreateLogger();
         }
         // Method to move the elevator
         public async Task Notify()
-        { 
+        {
             List<Floor> floorList = new List<Floor>(_elevatorModel.destinationFloors);
             while (floorList.Count != 0)
             {
@@ -51,13 +49,13 @@ namespace ElevatorSim.Models
                 {
                     var floor = floorModel.ID;
 
-                    int elevatorID = _elevatorModel.ID;
+                    string elevatorID = _elevatorModel.ID;
                     if (ElevatorModel.CurrentFloor == floor)
                     {
-                        objectLogger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
+                        _logger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
                         // ElevatorModel.CurrentStatus = Status.IDLE;
                         // ElevatorModel.CurrentDirection = Direction.NONE;
-                        
+
                         List<People> waitingPeople = new List<People>(floorModel.Num_People);
                         foreach (var people in waitingPeople)
                         {
@@ -65,11 +63,11 @@ namespace ElevatorSim.Models
                         }
                         AddOccupants(waitingPeople);
                         await SimulateBoardingDelay();
-                      
+
                     }
                     else
                     {
-                        objectLogger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
+                        _logger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
                         ElevatorModel.CurrentStatus = Status.MOVING;
 
                         if (ElevatorModel.CurrentFloor < floor)
@@ -80,7 +78,7 @@ namespace ElevatorSim.Models
 
                                 DepartFromElevator(floorModel, i);
                                 ElevatorModel.CurrentFloor = i;
-                                objectLogger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
+                                _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
                                 if (ElevatorModel.CurrentFloor != floor)
                                 {
                                     await SimulateMoveDelay();
@@ -105,7 +103,7 @@ namespace ElevatorSim.Models
                             {
                                 DepartFromElevator(floorModel, i);
                                 ElevatorModel.CurrentFloor = i;
-                                objectLogger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
+                                _logger.LogMessage($"Elevator {elevatorID} is on floor {ElevatorModel.CurrentFloor}");
                                 if (ElevatorModel.CurrentFloor != floor)
                                 {
                                     await SimulateMoveDelay();
@@ -126,7 +124,7 @@ namespace ElevatorSim.Models
 
                     ElevatorModel.CurrentStatus = Status.IDLE;
                     ElevatorModel.CurrentDirection = Direction.NONE;
-                    objectLogger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
+                    _logger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
                     ElevatorModel.destinationFloors.Remove(floorModel);
                 }
                 floorList = new List<Floor>(_elevatorModel.destinationFloors);
@@ -145,6 +143,7 @@ namespace ElevatorSim.Models
             {
                 var peoples = _elevatorModel.Occupancy.Where(x => x.DestinationFloor == currentFloor && x.OnElevator == true).ToList();
                 RemoveOccupants(peoples);
+                _logger.LogMessage($"{peoples.Count} departed from elevator.");
             }
         }
 
@@ -154,12 +153,12 @@ namespace ElevatorSim.Models
         }
 
         // Method to add occupants to the elevator
-        public bool AddOccupants(List<People> listOfPeople)
+        private bool AddOccupants(List<People> listOfPeople)
         {
             if (ElevatorModel.Occupancy.Count + listOfPeople.Count <= ElevatorModel.Capacity)
             {
                 ElevatorModel.Occupancy.AddRange(listOfPeople);
-                _floorController.RemovePeople(_elevatorModel.CurrentFloor,listOfPeople);
+                _floorController.RemovePeople(_elevatorModel.CurrentFloor, listOfPeople);
                 foreach (var people in listOfPeople)
                 {
                     if (_elevatorModel.destinationFloors.Exists(x => x.ID == people.DestinationFloor) == false)
@@ -175,36 +174,28 @@ namespace ElevatorSim.Models
                 }
                 else
                 {
-                    _elevatorModel.destinationFloors = 
+                    _elevatorModel.destinationFloors =
                         _elevatorModel.destinationFloors.OrderBy(x => x.ID).ToList();
                 }
                 return true;
             }
             else
             {
-                objectLogger.LogMessage("Elevator is at maximum capacity.");
+                _logger.LogMessage("Elevator is at maximum capacity.");
+                _logger.LogMessage("Scheduling another elevator for pickup.");
+                _buildingManager.CallElevator(_elevatorModel.CurrentFloor);
                 return false;
             }
         }
 
         // Method to remove occupants from the elevator
-        public void RemoveOccupants(List<People> listOfPeople)
+        private void RemoveOccupants(List<People> listOfPeople)
         {
             foreach (var people in listOfPeople)
             {
                 ElevatorModel.Occupancy.Remove(people);
             }
-            
+
         }
-
-    }
-
-    public class People
-    {
-       
-        public int DestinationFloor { get; set; }
-
-        public bool OnElevator { get; set; }
-
     }
 }

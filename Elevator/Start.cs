@@ -28,12 +28,13 @@ namespace ElevatorSim
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddSingleton<IElevatorController, ElevatorController>();
-                    services.AddSingleton<IFloorController, FloorController>();
-                    services.AddSingleton<IBuildingController, BuildingController>();
+                    services.AddSingleton<IElevatorManager, ElevatorManager>();
+                    services.AddSingleton<IFloorController, FloorManager>();
+                    services.AddSingleton<IBuildingManager, BuildingManager>();
                     services.AddSingleton<Config>(elevatorConfig);
                     services.AddTransient<IAppLogger, AppLogger>();
                     services.AddHostedService<BuildingBackgroundService>();
+                    services.AddTransient<IElevatorController, ElevatorController>();
                 })
                 .UseConsoleLifetime()
                 .Build();
@@ -44,7 +45,7 @@ namespace ElevatorSim
 
             var serviceProvider = host.Services;
    
-            IBuildingController buildingController = serviceProvider.GetRequiredService<IBuildingController>();
+            IBuildingManager buildingController = serviceProvider.GetRequiredService<IBuildingManager>();
 
             buildingController.CreateBuilding();
 
@@ -87,13 +88,13 @@ namespace ElevatorSim
             Console.WriteLine("Hello");
         }
 
-        private static async Task GetStatus(IBuildingController buildingController)
+        private static async Task GetStatus(IBuildingManager buildingController)
         {
             string response = await buildingController.GetBuildingStatus();
             Console.WriteLine(response);
         }
 
-        private static void CallElevator(IBuildingController buildingController)
+        private static void CallElevator(IBuildingManager buildingController)
         {
             int maxRetries = 5;
             int retries = 0;
@@ -123,7 +124,7 @@ namespace ElevatorSim
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine();
+                            Console.WriteLine(ex.Message);
                         }
                     });
                 }
