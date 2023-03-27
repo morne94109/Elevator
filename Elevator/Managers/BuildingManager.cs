@@ -13,7 +13,7 @@ namespace ElevatorSim.Managers
 {
     internal class BuildingManager : IBuildingManager
     {
-        private readonly IElevatorManager _elevatorController;
+        private readonly IElevatorManager _elevatorManager;
         private readonly IFloorManager _floorManager;
         private readonly IAppLogger _logger;
         private readonly Config _config;
@@ -25,7 +25,7 @@ namespace ElevatorSim.Managers
             IAppLogger logger,
             Config config)
         {
-            _elevatorController = elevatorManager;
+            _elevatorManager = elevatorManager;
             _floorManager = floorController;           
             _logger = logger;
             _config = config;
@@ -35,7 +35,7 @@ namespace ElevatorSim.Managers
         {
             _logger.LogMessage("Staring building construction!");
             _floorManager.SetupFloors();
-            _elevatorController.SetupElevators();
+            _elevatorManager.SetupElevators();
         }
 
         // Method to call an elevator to a specific floor
@@ -64,7 +64,7 @@ namespace ElevatorSim.Managers
 
         public async Task<string> GetBuildingStatus()
         {
-            string elevatorResponse = await _elevatorController.GetElevatorStatus();
+            string elevatorResponse = await _elevatorManager.GetElevatorStatus();
             
             string floorResponse = await _floorManager.GetFloorsStatus();
 
@@ -74,7 +74,7 @@ namespace ElevatorSim.Managers
         public async Task ScheduleAndNotifyElevator(int floor)
         {
             
-                IElevatorController result = await _elevatorController.ScheduleElevator(floor);
+                IElevatorController result = await _elevatorManager.ScheduleElevator(floor);
 
                 if (result != null && result.ElevatorModel.CurrentStatus != Status.MOVING)
                 {                      

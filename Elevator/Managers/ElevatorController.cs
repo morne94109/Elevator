@@ -43,14 +43,14 @@ namespace ElevatorSim.Managers
         // Method to move the elevator
         public async Task Notify()
         {
-            List<Floor> floorList = new List<Floor>(_elevatorModel.destinationFloors);
+            List<Floor> floorList = new List<Floor>(ElevatorModel.destinationFloors);
             while (floorList.Count != 0)
             {
                 foreach (var floorModel in floorList)
                 {
                     var floor = floorModel.ID;
 
-                    string elevatorID = _elevatorModel.ID;
+                    string elevatorID = ElevatorModel.ID;
                     if (ElevatorModel.CurrentFloor == floor)
                     {
                         _logger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
@@ -133,7 +133,7 @@ namespace ElevatorSim.Managers
                     _logger.LogMessage($"Elevator {elevatorID} reached floor {floor}");
                     ElevatorModel.destinationFloors.Remove(floorModel);
                 }
-                floorList = new List<Floor>(_elevatorModel.destinationFloors);
+                floorList = new List<Floor>(ElevatorModel.destinationFloors);
             }
         }
 
@@ -145,9 +145,9 @@ namespace ElevatorSim.Managers
         private void DepartFromElevator(Floor floorModel, int currentFloor)
         {
             //If people are on elevator and reach the destination floor they can leave
-            if (_elevatorModel.Occupancy.Any(x => x.DestinationFloor == currentFloor && x.OnElevator == true))
+            if (ElevatorModel.Occupancy.Any(x => x.DestinationFloor == currentFloor && x.OnElevator == true))
             {
-                var peoples = _elevatorModel.Occupancy.Where(x => x.DestinationFloor == currentFloor && x.OnElevator == true).ToList();
+                var peoples = ElevatorModel.Occupancy.Where(x => x.DestinationFloor == currentFloor && x.OnElevator == true).ToList();
                 RemoveOccupants(peoples);
                 _logger.LogMessage($"{peoples.Count} departed from elevator.");
             }
@@ -155,7 +155,7 @@ namespace ElevatorSim.Managers
 
         private static async Task SimulateMoveDelay()
         {
-            await Task.Delay(5000);
+            await Task.Delay(0);
         }
 
         // Method to add occupants to the elevator
@@ -165,25 +165,25 @@ namespace ElevatorSim.Managers
             {
                 _logger.LogMessage("1");
                 ElevatorModel.Occupancy.AddRange(listOfPeople);
-                _floorController.RemovePeople(_elevatorModel.CurrentFloor, listOfPeople);
+                _floorController.RemovePeople(ElevatorModel.CurrentFloor, listOfPeople);
                 foreach (var people in listOfPeople)
                 {
-                    if (_elevatorModel.destinationFloors.Exists(x => x.ID == people.DestinationFloor) == false)
+                    if (ElevatorModel.destinationFloors.Exists(x => x.ID == people.DestinationFloor) == false)
                     {
                         //Only add as drop off, not pickup as floor wasn't requested for pickup.
-                        _elevatorModel.destinationFloors.Add(new Floor(people.DestinationFloor));
+                        ElevatorModel.destinationFloors.Add(new Floor(people.DestinationFloor));
                     }
                 }
 
-                if (_elevatorModel.CurrentFloor >= (_elevatorModel.totalFloors / 2))
+                if (ElevatorModel.CurrentFloor >= (ElevatorModel.totalFloors / 2))
                 {
-                    _elevatorModel.destinationFloors =
-                        _elevatorModel.destinationFloors.OrderByDescending(x => x.ID).ToList();
+                    ElevatorModel.destinationFloors =
+                        ElevatorModel.destinationFloors.OrderByDescending(x => x.ID).ToList();
                 }
                 else
                 {
-                    _elevatorModel.destinationFloors =
-                        _elevatorModel.destinationFloors.OrderBy(x => x.ID).ToList();
+                    ElevatorModel.destinationFloors =
+                        ElevatorModel.destinationFloors.OrderBy(x => x.ID).ToList();
                 }
                 return true;
             }
@@ -191,7 +191,7 @@ namespace ElevatorSim.Managers
             {
                 _logger.LogMessage("Elevator is at maximum capacity.");
                 _logger.LogMessage("Scheduling another elevator for pickup.");
-                _buildingManager.CallElevator(_elevatorModel.CurrentFloor);
+                _buildingManager.CallElevator(ElevatorModel.CurrentFloor);
                 return false;
             }
         }
