@@ -1,20 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Elevator.Models;
+using Elevator.Implementation;
 using ElevatorSim.Contracts;
-using ElevatorSim.Logger;
 using ElevatorSim.Models;
 using Serilog;
 
+[assembly: InternalsVisibleTo("ElevatorUnitTests")]
 namespace ElevatorSim.Managers
 {
 
     internal class ElevatorController : IElevatorController
     {
         private readonly ElevatorModel _elevatorModel;
+        private readonly Config _config;
         private readonly IFloorManager _floorController;
         private readonly IBuildingManager _buildingManager;
         private readonly ILogger _logger;
@@ -23,7 +25,9 @@ namespace ElevatorSim.Managers
             IFloorManager floorController,
             IBuildingManager buildingManager)
         {
+
             _elevatorModel = new ElevatorModel(config.GetCapacity(), config.GetNumFloors());
+            this._config = config;
             _floorController = floorController;
             _buildingManager = buildingManager;
             _logger = SetupLogger(_elevatorModel.ID);
@@ -40,10 +44,15 @@ namespace ElevatorSim.Managers
                 .WriteTo.File($"logs/elevator-{id}-.txt", rollingInterval: RollingInterval.Day)
                 .CreateLogger();
         }
-        // Method to move the elevator
+        
+        /// <summary>
+        /// Method to simulate elevator movement.
+        /// </summary>
+        /// <returns></returns>
         public async Task Notify()
         {
             List<Floor> floorList = new List<Floor>(ElevatorModel.destinationFloors);
+            // Loop through the list of floors until empty
             while (floorList.Count != 0)
             {
                 foreach (var floorModel in floorList)
@@ -51,11 +60,10 @@ namespace ElevatorSim.Managers
                     var floor = floorModel.ID;
 
                     string elevatorID = ElevatorModel.ID;
+                    // if floor is same as elevator current floor pickup people
                     if (ElevatorModel.CurrentFloor == floor)
                     {
                         _logger.LogMessage($"Elevator {elevatorID} is already on floor {floor}");
-                        // ElevatorModel.CurrentStatus = Status.IDLE;
-                        // ElevatorModel.CurrentDirection = Direction.NONE;
 
                         List<People> waitingPeople = new List<People>(floorModel.Num_People);
                         foreach (var people in waitingPeople)
@@ -64,7 +72,7 @@ namespace ElevatorSim.Managers
                         }
                         AddOccupants(waitingPeople);
                         _logger.LogMessage($"New occupants");
-                       // await SimulateBoardingDelay();
+                        await SimulateBoardingDelay();
 
                     }
                     else
@@ -72,6 +80,7 @@ namespace ElevatorSim.Managers
                         _logger.LogMessage($"Elevator {elevatorID} is moving to floor {floor}");
                         ElevatorModel.CurrentStatus = Status.MOVING;
 
+                        // if elevator current floor is lower than destination floor go UP
                         if (ElevatorModel.CurrentFloor < floor)
                         {
                             ElevatorModel.CurrentDirection = Direction.UP;
@@ -88,6 +97,7 @@ namespace ElevatorSim.Managers
                                 else
                                 {
                                     List<People> waitingPeople = new List<People>(floorModel.Num_People);
+                                    //People are boarding
                                     foreach (var people in waitingPeople)
                                     {
                                         people.OnElevator = true;
@@ -99,6 +109,7 @@ namespace ElevatorSim.Managers
                             }
 
                         }
+                        // if elevator current floor is higher than destination floor go DOWN
                         else if (ElevatorModel.CurrentFloor > floor)
                         {
                             ElevatorModel.CurrentDirection = Direction.DOWN;
@@ -115,6 +126,7 @@ namespace ElevatorSim.Managers
                                 else
                                 {
                                     List<People> waitingPeople = new List<People>(floorModel.Num_People);
+                                    //People are boarding
                                     foreach (var people in waitingPeople)
                                     {
                                         people.OnElevator = true;
@@ -137,11 +149,20 @@ namespace ElevatorSim.Managers
             }
         }
 
+        /// <summary>
+        /// Simulate boarding delay
+        /// </summary>
+        /// <returns></returns>
         private async Task SimulateBoardingDelay()
         {
-            await Task.Delay(50);
+            await Task.Delay(_config.GetBoardingDelay());
         }
 
+        /// <summary>
+        /// Depart from elevator
+        /// </summary>
+        /// <param name="floorModel"></param>
+        /// <param name="currentFloor"></param>
         private void DepartFromElevator(Floor floorModel, int currentFloor)
         {
             //If people are on elevator and reach the destination floor they can leave
@@ -153,13 +174,22 @@ namespace ElevatorSim.Managers
             }
         }
 
-        private static async Task SimulateMoveDelay()
+        /// <summary>
+        /// Simulate move delay
+        /// </summary>
+        /// <returns></returns>
+
+        private async Task SimulateMoveDelay()
         {
-            await Task.Delay(0);
+            await Task.Delay(_config.GetMoveDelay());
         }
 
-        // Method to add occupants to the elevator
-        private bool AddOccupants(List<People> listOfPeople)
+        /// <summary>
+        /// Add occupants to elevator
+        /// </summary>
+        /// <param name="listOfPeople"></param>
+        /// <returns></returns>
+        internal bool AddOccupants(List<People> listOfPeople)
         {
             if (ElevatorModel.Occupancy.Count + listOfPeople.Count <= ElevatorModel.Capacity)
             {
@@ -191,12 +221,15 @@ namespace ElevatorSim.Managers
             {
                 _logger.LogMessage("Elevator is at maximum capacity.");
                 _logger.LogMessage("Scheduling another elevator for pickup.");
-                _buildingManager.CallElevator(ElevatorModel.CurrentFloor);
+                _buildingManager.AddFloorToQueue(ElevatorModel.CurrentFloor);
                 return false;
             }
         }
 
-        // Method to remove occupants from the elevator
+        /// <summary>
+        /// Remove occupants from elevator
+        /// </summary>
+        /// <param name="listOfPeople"></param>
         private void RemoveOccupants(List<People> listOfPeople)
         {
             foreach (var people in listOfPeople)

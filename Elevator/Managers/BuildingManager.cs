@@ -31,6 +31,9 @@ namespace ElevatorSim.Managers
             _config = config;
         }
 
+        /// <summary>
+        /// Create the building
+        /// </summary>
         public void CreateBuilding()
         {
             _logger.LogMessage("Staring building construction!");
@@ -38,8 +41,12 @@ namespace ElevatorSim.Managers
             _elevatorManager.SetupElevators();
         }
 
-        // Method to call an elevator to a specific floor
-        public Task<bool> CallElevator(int floor)
+        /// <summary>
+        /// Add a floor to the queue for pickup
+        /// </summary>
+        /// <param name="floor"></param>
+        /// <returns></returns>
+        public Task<bool> AddFloorToQueue(int floor)
         {
             if (0 <= floor && floor <= _config.GetNumFloors())
             {
@@ -62,6 +69,10 @@ namespace ElevatorSim.Managers
             return Task.FromResult(true);
         }
 
+        /// <summary>
+        /// Get the status of the building
+        /// </summary>
+        /// <returns></returns>
         public async Task<string> GetBuildingStatus()
         {
             string elevatorResponse = await _elevatorManager.GetElevatorStatus();
@@ -71,6 +82,11 @@ namespace ElevatorSim.Managers
             return elevatorResponse + Environment.NewLine + floorResponse;
         }
 
+        /// <summary>
+        /// Find an elevator and schedule it to pick up the next floor in the queue
+        /// </summary>
+        /// <param name="floor"></param>
+        /// <returns></returns>
         public async Task ScheduleAndNotifyElevator(int floor)
         {
             
@@ -83,11 +99,15 @@ namespace ElevatorSim.Managers
                 else if(result == null)
                 {
                     _logger.LogMessage($"Unable to find elevator available for floor {floor}. Add back into queue.");
-                    await CallElevator(floor);
+                    await AddFloorToQueue(floor);
                 }
             
         }
 
+        /// <summary>
+        /// Return the next floor from the queue
+        /// </summary>
+        /// <returns></returns>
         public Task<int> GetNextFromQueue()
         {
             if (_floorQueue.IsEmpty == false && _floorQueue.TryDequeue(out int floor))

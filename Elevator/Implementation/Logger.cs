@@ -2,11 +2,11 @@ using ElevatorSim.Contracts;
 using Serilog;
 using Serilog.Core;
 
-namespace ElevatorSim.Logger;
+namespace Elevator.Implementation;
 
 public class AppLogger : IAppLogger
 {
-    
+
     public AppLogger()
     {
         SetupLogger();

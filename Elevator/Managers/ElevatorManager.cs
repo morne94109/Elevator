@@ -1,3 +1,4 @@
+using ElevatorSim.Extensions;
 using ElevatorSim.Contracts;
 using ElevatorSim.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,9 +13,14 @@ internal class ElevatorManager : IElevatorManager
     private IAppLogger _logger;
     private readonly IFloorManager _floorController;
     private readonly IServiceProvider _serviceProvider;
-    List<IElevatorController> Elevators = new List<IElevatorController>();
+
+    internal List<IElevatorController> Elevators = new List<IElevatorController>();
     public int FloorCount { get; set; }
 
+
+    /// <summary>
+    /// Setup the elevators
+    /// </summary>
     public void SetupElevators()
     {
         FloorCount = _floorController.GetFloorCount();
@@ -23,7 +29,7 @@ internal class ElevatorManager : IElevatorManager
         {
             var elevator = _serviceProvider.GetRequiredService<IElevatorController>();
             Elevators.Add(elevator);
-            //new ElevatorController(i + 1, _config.GetCapacity(), FloorCount, _floorController))
+
             _logger.LogMessage($"Elevator {elevator.ElevatorModel.ID} has been installed.");
         }
 
@@ -39,6 +45,11 @@ internal class ElevatorManager : IElevatorManager
         _serviceProvider = serviceProvider;
     }
 
+    /// <summary>
+    /// Find and return the nearest elevator to the floor
+    /// </summary>
+    /// <param name="floor"></param>
+    /// <returns></returns>
     public Task<IElevatorController> ScheduleElevator(int floor)
     {
         IElevatorController nearestElevator = null;
@@ -47,8 +58,14 @@ internal class ElevatorManager : IElevatorManager
         int totalWaiting = destinationFloor.GetPeopleOnFloor();
 
         int distanceLeeway = 3;
+        //Loop until nearest elevator is found.
+        // Increase leeway by 1 each time to allow for elevator to be found;
         while (nearestElevator == null && distanceLeeway <= _config.GetNumFloors())
         {
+            
+            //Shuffle list to avoid all floors scheduled on the same elevator
+            Elevators.Shuffle();
+
             // Find the nearest available elevator
             foreach (IElevatorController elevator in Elevators)
             {
@@ -63,6 +80,7 @@ internal class ElevatorManager : IElevatorManager
                 int tempOccupancy = elevatorModel.Occupancy.Count + totalAlreadyWaiting;
 
 
+                // if elevator is idle and the elevator is not full, and the distance is 0
                 if (distance == 0
                     && elevatorModel.Occupancy.Count + totalWaiting <= elevatorModel.Capacity
                     && nearestElevator == null)
@@ -70,24 +88,34 @@ internal class ElevatorManager : IElevatorManager
                     nearestElevator = elevator;
                     shortestDistance = distance;
                 }
+                // if elevator is moving and going up, and the elevator is not full, and the distance is less than the distance leeway
                 else if (elevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.UP }
                         && (tempOccupancy + totalWaiting) <= elevatorModel.Capacity
                         && distance <= distanceLeeway)
                 {
-
-                    if (elevatorModel.Occupancy.Count + totalAlreadyWaiting <= elevatorModel.Capacity)
+                    if (distance < shortestDistance)
                     {
-                        nearestElevator = elevator;
+                        if (elevatorModel.Occupancy.Count + totalAlreadyWaiting <= elevatorModel.Capacity)
+                        {
+                            nearestElevator = elevator;
+                            shortestDistance = distance;
+                        }
                     }
-
-                    break;
                 }
+                //if elevator is moving and going down, and the elevator is not full, and the distance is less than the distance leeway
                 else if (elevatorModel is { CurrentStatus: Status.MOVING, CurrentDirection: Direction.DOWN }
                          && (tempOccupancy + totalWaiting) <= elevatorModel.Capacity
                          && distance <= distanceLeeway)
                 {
-                    nearestElevator = elevator;
-                    break;
+                    // if the elevator is not full, and the distance is less than the distance leeway
+                    if (elevatorModel.Occupancy.Count + totalAlreadyWaiting <= elevatorModel.Capacity)
+                    {
+                        if (distance < shortestDistance)
+                        {
+                            nearestElevator = elevator;
+                            shortestDistance = distance;
+                        }
+                    }                    
                 }
                 else if (elevatorModel is { CurrentStatus: Status.IDLE, CurrentDirection: Direction.NONE }
                          && tempOccupancy + totalWaiting <= elevatorModel.Capacity)
@@ -96,6 +124,7 @@ internal class ElevatorManager : IElevatorManager
                     {
                         nearestElevator = elevator;
                         shortestDistance = distance;
+                        
                     }
                 }
             }
@@ -112,16 +141,16 @@ internal class ElevatorManager : IElevatorManager
         {
             Floor tempFloor =
                 nearestElevator.ElevatorModel.destinationFloors.FirstOrDefault(x => x.ID == destinationFloor.ID);
-            
+
             if (tempFloor == null)
             {
                 nearestElevator.ElevatorModel.destinationFloors.Add(destinationFloor);
             }
-            else if (tempFloor.Num_People.Count == 0 )
+            else if (tempFloor.Num_People.Count == 0)
             {
                 tempFloor.Num_People = destinationFloor.Num_People;
             }
-           
+
             return Task.FromResult(nearestElevator);
         }
         else
@@ -131,6 +160,10 @@ internal class ElevatorManager : IElevatorManager
         }
     }
 
+    /// <summary>
+    /// Return current elevator status
+    /// </summary>
+    /// <returns></returns>
     public Task<string> GetElevatorStatus()
     {
         string message = "Elevator status ---------------------";

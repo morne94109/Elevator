@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using ElevatorSim.Contracts;
 using ElevatorSim.Models;
 using System.Linq;
-using Elevator.Models;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("ElevatorUnitTests")]
@@ -22,7 +21,10 @@ internal class FloorManager : IFloorManager
         _logger = logger;
     }
 
-    public void SetupFloors(bool setupPeople = true)
+    /// <summary>
+    /// Setup the floors
+    /// </summary>
+    public void SetupFloors()
     {
         _logger.LogMessage($"Building floors.");
         for (int i = 0; i < _config.GetNumFloors(); i++)
@@ -31,33 +33,69 @@ internal class FloorManager : IFloorManager
             _logger.LogMessage($"Floor {i} has been completed.");
         }
         _logger.LogMessage("Setup completed of floors for building.");
-        
-        if (setupPeople)
-        {
-            PopulteFloors();
-        }
-    }
+ }
 
-    public void PopulteFloors()
+    /// <summary>
+    /// Populate the floors with people based on bool param
+    /// </summary>
+    /// <param name="autoPopulate"></param>
+    public void PopulateFloors(bool autoPopulate)
     {
+        // Loop through each floor
         for (int i = 0; i < _floors.Count; i++)
         {
-            var random = new Random();
-            var randomNum = random.Next(0, 6);
-            People people = new People();
-            for (int z = 0; z < randomNum; z++)
+            if (autoPopulate)
             {
-                people = new People();
-                int nextfloor = 0;
-                do
+                var random = new Random();
+                var randomNum = random.Next(0, 6);
+                People people = new People();
+                // Add random number of people to each floor
+                for (int z = 0; z < randomNum; z++)
                 {
-                    nextfloor = random.Next(0, _floors.Count);
-                }
-                while (nextfloor == i);
+                    people = new People();
+                    int nextfloor = 0;
+                    do
+                    {
+                        nextfloor = random.Next(0, _floors.Count);
+                    }
+                    while (nextfloor == i);
 
-                people.DestinationFloor = nextfloor;
-                people.OnElevator = false;
-                _floors[i].Num_People.Add(people);
+                    people.DestinationFloor = nextfloor;
+                    people.OnElevator = false;
+                    _floors[i].Num_People.Add(people);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"How many people should floor {i} have?");
+                string userInput = Console.ReadLine();
+                int numPeople;
+                while (int.TryParse(userInput, out numPeople) == false )
+                {
+                    Console.WriteLine("Please enter a valid number.");
+                    userInput = Console.ReadLine();
+                }
+
+              
+                People people = new People();
+                for(int c = 0; c < numPeople; c++)
+                {
+                    people = new People();
+                    Console.WriteLine($"What floor should person {c} be going to?");
+                    userInput = Console.ReadLine();
+                    int nextfloor;
+                   
+                    while (int.TryParse(userInput, out nextfloor) == false || nextfloor >= _floors.Count)
+                    {
+                        Console.WriteLine($"Please enter a valid number. Between 0 and {_floors.Count - 1}");
+                        userInput = Console.ReadLine();                       
+                    }
+
+
+                    people.DestinationFloor = nextfloor;
+                    people.OnElevator = false;
+                    _floors[i].Num_People.Add(people);
+                }
             }
         }
     }
@@ -90,11 +128,11 @@ internal class FloorManager : IFloorManager
         }
     }
 
-    public void RemovePeople(int floor)
-    {
-        _floors[floor].Num_People = new List<People>();        
-    }
 
+    /// <summary>
+    /// Return a string of the floors and the number of people waiting on each floor
+    /// </summary>
+    /// <returns></returns>
     public Task<string> GetFloorsStatus()
     {
         string message = "Floor status ---------------------";

@@ -1,11 +1,12 @@
-using Elevator.Models;
 using ElevatorSim.Models;
 
 namespace ElevatorSim.Contracts;
 
 public interface IFloorManager
 {
-    void SetupFloors(bool setupPeople = true);
+    void SetupFloors();
+
+    void PopulateFloors(bool autoPopulate);
 
     int GetFloorCount();
 
@@ -14,8 +15,7 @@ public interface IFloorManager
     List<People> GetPeopleWaiting(int floor);
     
     bool HasPeopleWaiting(int floor);
-
-    void RemovePeople(int floor);
+        
     void RemovePeople(int floor, List<People> peopleList);
 
     Task<string> GetFloorsStatus();

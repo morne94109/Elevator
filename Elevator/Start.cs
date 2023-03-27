@@ -5,15 +5,17 @@ using System.Text;
 using System.Threading.Tasks;
 using ElevatorSim.Contracts;
 using ElevatorSim.Models;
-using ElevatorSim.Logger;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ElevatorSim.BackgroungServices;
 using ElevatorSim.Managers;
+using System.Diagnostics.CodeAnalysis;
+using Elevator.Implementation;
 
 namespace ElevatorSim
 {
+    [ExcludeFromCodeCoverage]
     public class Start
     {
         private static Config elevatorConfig;
@@ -60,6 +62,8 @@ namespace ElevatorSim
                 Console.WriteLine("---------------------------------------");
                 Console.WriteLine("---------- 1: Call Elevator   ---------");
                 Console.WriteLine("---------- 2: Get Status      ---------");
+                Console.WriteLine("---------- 3: Set People on floors ----");
+                Console.WriteLine("---------- 99: Exit -------------------");
                 Console.WriteLine("---------------------------------------");
 
                 string userResponse = Console.ReadLine();
@@ -73,6 +77,10 @@ namespace ElevatorSim
                             break;
                         case 2:
                             await GetStatus(buildingController);
+                            break;
+                        case 3:
+                            IFloorManager floorManager = serviceProvider.GetRequiredService<IFloorManager>();
+                            await SetPeopleOnFloors(floorManager);
                             break;
                         case 99:
                             exit = true;
@@ -90,10 +98,51 @@ namespace ElevatorSim
             Console.WriteLine("Hello");
         }
 
+        private static Task SetPeopleOnFloors(IFloorManager floorManager)
+        {          
+            bool exit = false;
+            while (exit == false)
+            {
+
+                Console.WriteLine("Do you want to auto populate the floors? (yes or no)");
+                Console.WriteLine("---------------------------------------");
+                Console.WriteLine("---------- 1: Yes  --------------------");
+                Console.WriteLine("---------- 2: No   --------------------");
+                Console.WriteLine("---------- 99: Exit -------------------");
+                Console.WriteLine("---------------------------------------");
+
+                string userResponse = Console.ReadLine();
+                if (int.TryParse(userResponse, out int choice))
+                {
+                    switch (choice)
+                    {
+                        case 1:
+                            floorManager.PopulateFloors(true);
+                            exit = true;
+                            break;
+                        case 2:
+                            floorManager.PopulateFloors(false);
+                            exit = true;
+                            break;
+                        case 99:
+                            exit = true;
+                            break;
+                        default:
+                            Console.WriteLine("Invalid choice! Please choice from menu.");
+                            break;
+                    }
+                }            
+            }
+
+            return Task.CompletedTask;
+
+        }
+
         private static async Task GetStatus(IBuildingManager buildingController)
         {
             string response = await buildingController.GetBuildingStatus();
             Console.WriteLine(response);
+
         }
 
         private static void CallElevator(IBuildingManager buildingController)
@@ -122,7 +171,7 @@ namespace ElevatorSim
                     {
                         try
                         {
-                            await buildingController.CallElevator(userFloor);
+                            await buildingController.AddFloorToQueue(userFloor);
                         }
                         catch (Exception ex)
                         {
@@ -160,7 +209,25 @@ namespace ElevatorSim
             {
                 throw new Exception($"Unable to determine the requested capacity from config file.\nExpected integer got {stringCapacity}");
             }
-            elevatorConfig = new Config(numFloors, numElevators, capacity);
+
+            string stringPollingDelay = configuration["polling_delay"];
+            if (int.TryParse(stringPollingDelay, out int polling_delay) == false)
+            {
+                throw new Exception($"Unable to determine the requested polling_delay from config file.\nExpected integer got {stringPollingDelay}");
+            }
+
+            string stringMoveDelay = configuration["move_delay"];
+            if (int.TryParse(stringMoveDelay, out int move_delay) == false)
+            {
+                throw new Exception($"Unable to determine the requested move_delay from config file.\nExpected integer got {stringMoveDelay}");
+            }
+
+            string stringBoardingDelay = configuration["boarding_delay"];
+            if (int.TryParse(stringBoardingDelay, out int boarding_delay) == false)
+            {
+                throw new Exception($"Unable to determine the requested boarding_delay from config file.\nExpected integer got {stringBoardingDelay}");
+            }
+            elevatorConfig = new Config(numFloors, numElevators, capacity, polling_delay, move_delay, boarding_delay);
 
         }
     }

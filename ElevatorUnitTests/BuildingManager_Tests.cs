@@ -20,7 +20,7 @@ namespace ElevatorUnitTests
            
             IAppLogger logger = Mock.Of<IAppLogger>();
             var serviceProvider = new Mock<IServiceProvider>();
-            Config config = new Config(10, 3, 10);
+            Config config = new Config(10, 3, 10, 0, 0, 0);
             FloorManager floorController = new FloorManager(config, logger);
             ElevatorManager elevatorManager = new ElevatorManager(config, logger, floorController, serviceProvider.Object);
             
@@ -33,9 +33,9 @@ namespace ElevatorUnitTests
 
             if (AddTwice)
             {
-                await buildingManager.CallElevator(floor);
+                await buildingManager.AddFloorToQueue(floor);
             }
-            var result = await buildingManager.CallElevator(floor);
+            var result = await buildingManager.AddFloorToQueue(floor);
 
             Assert.True(buildingManager.GetNextFromQueue().Result == floor);
             Assert.True(result == true);
@@ -43,6 +43,7 @@ namespace ElevatorUnitTests
         
         
         [InlineData(15)]
+        [InlineData(-2)]
         [Theory]
         public void Neg_CallElevator(int floor)
         {
@@ -50,7 +51,7 @@ namespace ElevatorUnitTests
            
             IAppLogger logger = Mock.Of<IAppLogger>();
             var serviceProvider = new Mock<IServiceProvider>();
-            Config config = new Config(10, 3, 10);
+            Config config = new Config(10, 3, 10, 0, 0, 0);
             FloorManager floorController = new FloorManager(config, logger);
             ElevatorManager elevatorManager = new ElevatorManager(config, logger, floorController, serviceProvider.Object);
             
@@ -61,7 +62,7 @@ namespace ElevatorUnitTests
                 .Setup(x => x.GetService(typeof(IElevatorController)))
                 .Returns(new ElevatorController(config, floorController, buildingManager));
 
-            var result = buildingManager.CallElevator(floor).Result;
+            var result = buildingManager.AddFloorToQueue(floor).Result;
 
             Assert.True(result == false);
         }
@@ -74,7 +75,7 @@ namespace ElevatorUnitTests
            
             IAppLogger logger = Mock.Of<IAppLogger>();
             var serviceProvider = new Mock<IServiceProvider>();
-            Config config = new Config(10, 3, 10);
+            Config config = new Config(10, 3, 10,0,0,0);
             FloorManager floorController = new FloorManager(config, logger);
             ElevatorManager elevatorManager = new ElevatorManager(config, logger, floorController, serviceProvider.Object);
             

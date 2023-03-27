@@ -1,27 +1,33 @@
 ﻿using ElevatorSim.Contracts;
+using ElevatorSim.Models;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace ElevatorSim.BackgroungServices
 {
+    [ExcludeFromCodeCoverage]
     public class BuildingBackgroundService : IHostedService, IDisposable
     {
         private IBuildingManager _buildingController { get; }
         private Timer? _timer = null;
         private ILogger _logger;
+        private readonly Config _config;
 
-        public BuildingBackgroundService(IBuildingManager buildingController1)
+        public BuildingBackgroundService(IBuildingManager buildingManager, Config config)
         {
-            _buildingController = buildingController1;
+            this._buildingController = buildingManager;
+            this._config = config;
             _logger = SetupLogger();
         }
 
       
+        //Setup logger for this class
         public ILogger SetupLogger()
         {
 
@@ -39,14 +45,15 @@ namespace ElevatorSim.BackgroungServices
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.Debug("Timed Hosted Service running.");
+            _logger.Debug("Building Background Service running.");
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero,
-                TimeSpan.FromSeconds(2));
+                TimeSpan.FromSeconds(_config.GetPollingDelay()));
 
             return Task.CompletedTask;
         }
 
+        //Execute the background service do send elevator to pickup people
         private async void DoWork(object? state)
         {
             _logger.Debug("Checking for floors to pickup people");
@@ -64,13 +71,12 @@ namespace ElevatorSim.BackgroungServices
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.Debug("Timed Hosted Service is stopping.");
+            _logger.Debug("Building Background Service is stopping.");
 
             _timer?.Change(Timeout.Infinite, 0);
 
             return Task.CompletedTask;
         }
-
-        
+                
     }
 }

@@ -1,5 +1,3 @@
-using Elevator.Models;
-
 namespace ElevatorSim.Models;
 
 public class ElevatorModel

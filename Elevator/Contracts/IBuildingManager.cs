@@ -3,7 +3,7 @@ namespace ElevatorSim.Contracts;
 public interface IBuildingManager
 {
     void CreateBuilding();
-    Task<bool> CallElevator(int floor);
+    Task<bool> AddFloorToQueue(int floor);
 
     Task<string> GetBuildingStatus();
 

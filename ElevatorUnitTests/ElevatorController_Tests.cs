@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Elevator.Models;
 using ElevatorSim.Contracts;
 using ElevatorSim.Managers;
 using ElevatorSim.Models;
@@ -24,7 +23,7 @@ public class ElevatorController_Tests
     {
         IAppLogger logger = Mock.Of<IAppLogger>();
         var serviceProvider = new Mock<IServiceProvider>();
-        Config config = new Config(numFloors, numElevators, capacity);
+        Config config = new Config(numFloors, numElevators, capacity, 0, 0, 0);
         
         FloorManager floorController = new FloorManager(config, logger);
         ElevatorManager elevatorManager = new ElevatorManager(config, logger, floorController, serviceProvider.Object);
@@ -69,8 +68,67 @@ public class ElevatorController_Tests
         
     }
 
-    public void SetElevatorFloor(int floor)
+
+    [InlineData(10, 3, 10, 2, 8,5,true)]
+    [InlineData(10, 3, 10, 2, 8, 9, false)]
+    [Theory]
+    public void AddOccupants(int numFloors,
+        int numElevators,
+        int capacity,
+        int destinationFloorNum,
+        int currentFloorNum,
+        int occupancy,
+        bool success)
     {
-        
+        IAppLogger logger = Mock.Of<IAppLogger>();
+        var serviceProvider = new Mock<IServiceProvider>();
+        Config config = new Config(numFloors, numElevators, capacity, 0, 0, 0);
+
+        FloorManager floorController = new FloorManager(config, logger);
+        ElevatorManager elevatorManager = new ElevatorManager(config, logger, floorController, serviceProvider.Object);
+
+        BuildingManager buildingManager = new BuildingManager(elevatorManager, floorController, logger, config);
+
+        ElevatorController elevatorController = new ElevatorController(config, floorController, buildingManager);
+
+        var random = new Random();
+
+        for (int i = 0; i < numFloors; i++)
+        {
+            Floor newFloor = new Floor(i)
+            {
+                Num_People = new List<People>()
+                {
+                    new People()
+                    {
+                        DestinationFloor = random.Next(0, numFloors)
+                    },
+                    new People()
+                    {
+                        DestinationFloor = random.Next(0, numFloors)
+                    }
+                }
+            };
+            floorController._floors.Add(newFloor);
+        }
+
+
+
+        var destinationFloor = floorController.GetFloor(destinationFloorNum);
+        elevatorController.ElevatorModel.destinationFloors.Add(destinationFloor);
+        elevatorController.ElevatorModel.CurrentFloor = currentFloorNum;
+        for (int z = 0; z < occupancy; z++)
+        {
+            elevatorController.ElevatorModel.Occupancy.Add(new People()
+            {
+                DestinationFloor = random.Next(0, numFloors),
+                OnElevator = false
+            });
+        }
+      
+
+       var result = elevatorController.AddOccupants(destinationFloor.Num_People);
+
+        Assert.True(result == success);
     }
 }
