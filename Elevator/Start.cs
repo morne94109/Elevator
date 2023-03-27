@@ -53,7 +53,7 @@ namespace ElevatorSim
 
             buildingController.CreateBuilding();
 
-            Console.WriteLine("We are done!\n");
+            Console.WriteLine("\nWe are done!\n");
 
             bool exit = false;
             while (exit == false)
@@ -95,7 +95,7 @@ namespace ElevatorSim
 
 
 
-            Console.WriteLine("Hello");
+            Console.WriteLine("Goodbye!");
         }
 
         private static Task SetPeopleOnFloors(IFloorManager floorManager)
