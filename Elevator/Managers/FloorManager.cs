@@ -14,7 +14,7 @@ internal class FloorManager : IFloorManager
 {
     private Config _config;
     private IAppLogger _logger;
-    private List<Floor> _floors = new List<Floor>();
+    public List<Floor> _floors { get; set; } = new List<Floor>();
 
     public FloorManager(Config config, IAppLogger logger)
     {

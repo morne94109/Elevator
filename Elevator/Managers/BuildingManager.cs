@@ -16,16 +16,19 @@ namespace ElevatorSim.Managers
         private readonly IElevatorManager _elevatorController;
         private readonly IFloorManager _floorManager;
         private readonly IAppLogger _logger;
+        private readonly Config _config;
         private ConcurrentQueue<int>  _floorQueue = new ConcurrentQueue<int>();
 
         // Constructor
         public BuildingManager(IElevatorManager elevatorManager,
             IFloorManager floorController,
-            IAppLogger logger)
+            IAppLogger logger,
+            Config config)
         {
             _elevatorController = elevatorManager;
             _floorManager = floorController;           
             _logger = logger;
+            _config = config;
         }
 
         public void CreateBuilding()
@@ -36,19 +39,27 @@ namespace ElevatorSim.Managers
         }
 
         // Method to call an elevator to a specific floor
-        public Task CallElevator(int floor)
+        public Task<bool> CallElevator(int floor)
         {
-            if(_floorQueue.Any(x => x == floor))
+            if (0 <= floor && floor <= _config.GetNumFloors())
             {
-                _logger.LogMessage($"Floor {floor} already scheduled for pickup. Will not add to queue.");                
+                if (_floorQueue.Any(x => x == floor))
+                {
+                    _logger.LogMessage($"Floor {floor} already scheduled for pickup. Will not add to queue.");
+                }
+                else
+                {
+                    _floorQueue.Enqueue(floor);
+                    _logger.LogMessage($"Added floor {floor} to queue for pickup.");
+                }
             }
             else
             {
-                _floorQueue.Enqueue(floor);
-                _logger.LogMessage($"Added floor {floor} to queue for pickup.");
+                _logger.LogMessage($"Floor {floor} is not a valid floor. Please try again.");
+                return Task.FromResult(false);
             }
 
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
         public async Task<string> GetBuildingStatus()
@@ -62,27 +73,26 @@ namespace ElevatorSim.Managers
 
         public async Task ScheduleAndNotifyElevator(int floor)
         {
-            IElevatorController result = await _elevatorController.ScheduleElevator(floor);
+            
+                IElevatorController result = await _elevatorController.ScheduleElevator(floor);
 
-            if (result != null && result.ElevatorModel.CurrentStatus != Status.MOVING)
-            {                      
-                _ = result.Notify();
-            }
-            else if(result == null)
-            {
-                _logger.LogMessage($"Unable to find elevator available for floor {floor}. Add back into queue.");
-                await CallElevator(floor);
-            }
+                if (result != null && result.ElevatorModel.CurrentStatus != Status.MOVING)
+                {                      
+                    _ = result.Notify();
+                }
+                else if(result == null)
+                {
+                    _logger.LogMessage($"Unable to find elevator available for floor {floor}. Add back into queue.");
+                    await CallElevator(floor);
+                }
+            
         }
 
         public Task<int> GetNextFromQueue()
         {
-            if (_floorQueue.IsEmpty == false)
+            if (_floorQueue.IsEmpty == false && _floorQueue.TryDequeue(out int floor))
             {
-                if (_floorQueue.TryDequeue(out int floor))
-                {
-                    return Task.FromResult(floor);
-                }
+                return Task.FromResult(floor);
             }
 
             return Task.FromResult(-1);
